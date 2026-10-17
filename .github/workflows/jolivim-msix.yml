@@ -42,7 +42,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Target toolchain: native x64, or x64->arm64 cross tools for arm64.
       - name: Set up MSVC (${{ matrix.arch }})
@@ -51,12 +51,12 @@ jobs:
           arch: ${{ matrix.arch }}
 
       - name: Set up NuGet
-        uses: NuGet/setup-nuget@v2
+        uses: NuGet/setup-nuget@v4
 
       # gettext/iconv are downloaded by make_msix.ps1 and checked against their
       # SHA-256, so caching them is safe; keyed on the script that pins them.
       - name: Cache gettext/iconv downloads
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: src/msix/cache
           key: msix-cache-${{ hashFiles('src/msix/make_msix.ps1') }}
@@ -80,7 +80,7 @@ jobs:
         run: nmake -f Make_mvc.mak GUI=yes WINUI=yes CPU=${{ matrix.cpu }} testmsix
 
       - name: Upload the MSIX
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: JoliVIM-${{ matrix.name }}-msix
           path: src/JoliVIM_*_*.msix
