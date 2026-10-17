@@ -1428,8 +1428,7 @@ add_class_members(class_T *cl, exarg_T *eap, garray_T *type_list_gap)
     {
 	ocmember_T	*m = &cl->class_class_members[i];
 	typval_T	*tv = &cl->class_members_tv[i];
-	// With ":source ++dryrun" the value is not needed, only the type.
-	if (m->ocm_init != NULL && !source_dryrun)
+	if (m->ocm_init != NULL)
 	{
 	    sctx_T	save_current_sctx = current_sctx;
 
@@ -2159,6 +2158,7 @@ early_ret:
     class_T *cl = NULL;
     class_T *extends_cl = NULL;  // class from "extends" argument
     class_T **intf_classes = NULL;
+    int	    intf_count = 0;	// number of items in "intf_classes"
     int	    num_enum_values = 0;
 
     cl = ALLOC_CLEAR_ONE(class_T);
@@ -2171,8 +2171,6 @@ early_ret:
 	cl->class_flags = CLASS_INTERFACE;
     else if (is_abstract)
 	cl->class_flags = CLASS_ABSTRACT;
-    if (source_dryrun)
-	cl->class_flags |= CLASS_DRYRUN;
 
     cl->class_refcount = 1;
     cl->class_name.length = (size_t)(name_end - name_start);
@@ -2685,7 +2683,10 @@ early_ret:
 	success = add_super_class_interfaces(extends_cl, &ga_impl,
 							&intf_classes_ga);
 
+    // When validating failed "intf_classes" may have fewer items than
+    // "ga_impl".
     intf_classes = intf_classes_ga.ga_data;
+    intf_count = intf_classes_ga.ga_len;
     intf_classes_ga.ga_len = 0;
 
     // Check no function argument name is used as a class member.
@@ -2801,7 +2802,7 @@ cleanup:
 
     if (intf_classes != NULL)
     {
-	for (int i = 0; i < ga_impl.ga_len; ++i)
+	for (int i = 0; i < intf_count; ++i)
 	    class_unref(intf_classes[i]);
 	vim_free(intf_classes);
     }
@@ -3879,11 +3880,6 @@ can_free_enum(class_T *cl)
 	    // If all of those members are no longer referenced, then the enum
 	    // may be freed.
 	    return TRUE;
-
-	// With ":source ++dryrun" the enum values were not created.
-	if (tv->v_type == VAR_OBJECT ? tv->vval.v_object == NULL
-						   : tv->vval.v_list == NULL)
-	    continue;
 
 	if (tv->v_type == VAR_LIST
 		&& tv->vval.v_list->lv_type->tt_member->tt_type == VAR_OBJECT

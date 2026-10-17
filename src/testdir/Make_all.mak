@@ -248,6 +248,7 @@ NEW_TESTS = \
 	test_plugin_ccomplete \
 	test_plugin_comment \
 	test_plugin_glvs \
+	test_plugin_gnat \
 	test_plugin_helpcurwin \
 	test_plugin_helptoc \
 	test_plugin_man \
@@ -533,6 +534,7 @@ NEW_TESTS_RES = \
 	test_plugin_ccomplete.res \
 	test_plugin_comment.res \
 	test_plugin_glvs.res \
+	test_plugin_gnat.res \
 	test_plugin_helpcurwin.res \
 	test_plugin_helptoc.res \
 	test_plugin_man.res \
