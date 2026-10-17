@@ -88,7 +88,7 @@ an 9999.70 &Help.&Sponsor		:help sponsor<CR>
 an 9999.70 &Help.O&rphans		:help kcc<CR>
 an 9999.75 &Help.-sep2-			<Nop>
 an 9999.80 &Help.&Version		:version<CR>
-an 9999.90 &Help.&About			:intro<CR>
+an 9999.90 &Help.&About			:about<CR>
 
 if exists(':tlmenu')
   tlnoremenu 9999.10 &Help.&Overview<Tab><F1>		<C-W>:help<CR>
@@ -102,7 +102,7 @@ if exists(':tlmenu')
   tlnoremenu 9999.70 &Help.O&rphans			<C-W>:help kcc<CR>
   tlnoremenu 9999.75 &Help.-sep2-			<Nop>
   tlnoremenu 9999.80 &Help.&Version			<C-W>:version<CR>
-  tlnoremenu 9999.90 &Help.&About			<C-W>:intro<CR>
+  tlnoremenu 9999.90 &Help.&About			<C-W>:about<CR>
 endif
 
 def s:Helpfind()

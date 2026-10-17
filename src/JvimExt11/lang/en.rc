@@ -1,0 +1,43 @@
+// vi:set ts=8 sts=4 sw=4 et:
+//
+// VIM - Vi IMproved    jvimext11 by Sylvain Cresto
+//
+// Do ":help uganda"  in Vim to read copying and usage conditions.
+// Do ":help credits" in Vim to see a list of people who contributed.
+//
+// English texts, used when there is no translation in the language of the
+// user.
+//
+// To add a language, copy this file to lang/<code>.rc, change the LANGUAGE
+// line, translate the texts and include the file in jvimext11.rc and
+// jvimext11_cfg.rc.  Also add the language to the Resources of
+// AppxManifest.xml.in.  Use "" for a quote; "&" marks the keyboard shortcut.
+
+#pragma code_page(65001)
+
+LANGUAGE LANG_ENGLISH, SUBLANG_NEUTRAL
+
+STRINGTABLE
+BEGIN
+    IDS_EDIT_IN_VIM         "Edit in JoliVIM"
+    IDS_OPEN_IN_VIM         "Open with JoliVIM"
+
+    IDS_SETTINGS_TITLE      "JoliVIM context menu settings"
+    IDS_GROUP_GVIM          "JoliVIM"
+    IDS_GVIM_LABEL          "Path of jvim.exe:"
+    IDS_GVIM_CUE            "Automatic detection"
+    IDS_BROWSE              "&Browse..."
+    IDS_STATUS_AUTO         "Detected automatically: "
+    IDS_STATUS_NOT_FOUND    "JoliVIM was not found: select jvim.exe below.  Meanwhile, the context menu entry is hidden."
+    IDS_STATUS_MISSING      "This file does not exist."
+    IDS_GROUP_OPEN          "Opening files"
+    IDS_USE_TABS            "Open each file in a new &tab page"
+    IDS_CANCEL              "Cancel"
+    IDS_VERSION             "Version "
+    IDS_LICENSE             "Vim is open source and distributed under the <a href=""https://github.com/vim/vim/blob/master/LICENSE"">Vim license</a>."
+    IDS_BROWSE_TITLE        "Select jvim.exe"
+    // "|" separates the filter name and its pattern.
+    IDS_BROWSE_FILTER       "jvim.exe|jvim.exe|Programs (*.exe)|*.exe|"
+    IDS_ERROR_MISSING       "The selected JoliVIM executable does not exist."
+    IDS_ERROR_SAVE          "The settings could not be saved."
+END

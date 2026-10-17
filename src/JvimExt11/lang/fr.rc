@@ -1,0 +1,38 @@
+// vi:set ts=8 sts=4 sw=4 et:
+//
+// VIM - Vi IMproved    jvimext11 by Sylvain Cresto
+//
+// Do ":help uganda"  in Vim to read copying and usage conditions.
+// Do ":help credits" in Vim to see a list of people who contributed.
+//
+// French texts, for all the French variants (SUBLANG_NEUTRAL).
+// See lang/en.rc.
+
+#pragma code_page(65001)
+
+LANGUAGE LANG_FRENCH, SUBLANG_NEUTRAL
+
+STRINGTABLE
+BEGIN
+    IDS_EDIT_IN_VIM         "Modifier dans JoliVIM"
+    IDS_OPEN_IN_VIM         "Ouvrir avec JoliVIM"
+
+    IDS_SETTINGS_TITLE      "Paramètres du menu contextuel de JoliVIM"
+    IDS_GROUP_GVIM          "JoliVIM"
+    IDS_GVIM_LABEL          "Chemin de jvim.exe :"
+    IDS_GVIM_CUE            "Détection automatique"
+    IDS_BROWSE              "&Parcourir..."
+    IDS_STATUS_AUTO         "Détecté automatiquement : "
+    IDS_STATUS_NOT_FOUND    "JoliVIM est introuvable : choisissez jvim.exe ci-dessous.  En attendant, l'entrée du menu reste masquée."
+    IDS_STATUS_MISSING      "Ce fichier n'existe pas."
+    IDS_GROUP_OPEN          "Ouverture des fichiers"
+    IDS_USE_TABS            "Ouvrir chaque fichier dans un nouvel &onglet"
+    IDS_CANCEL              "Annuler"
+    IDS_VERSION             "Version "
+    IDS_LICENSE             "Vim est un logiciel libre distribué sous la <a href=""https://github.com/vim/vim/blob/master/LICENSE"">licence Vim</a>."
+    IDS_BROWSE_TITLE        "Choisir jvim.exe"
+    // "|" separates the filter name and its pattern.
+    IDS_BROWSE_FILTER       "jvim.exe|jvim.exe|Programmes (*.exe)|*.exe|"
+    IDS_ERROR_MISSING       "L'exécutable JoliVIM choisi n'existe pas."
+    IDS_ERROR_SAVE          "Les paramètres n'ont pas pu être enregistrés."
+END

@@ -1,0 +1,8 @@
+; jvimext11_ming.def: the exports of jvimext11.dll for MinGW.
+; Same as jvimext11.def, but the 32-bit build needs the names without the
+; stdcall decoration.
+
+LIBRARY jvimext11
+EXPORTS
+    DllGetClassObject = DllGetClassObject@12    PRIVATE
+    DllCanUnloadNow = DllCanUnloadNow@0         PRIVATE

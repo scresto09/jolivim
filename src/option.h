@@ -1091,6 +1091,9 @@ EXTERN unsigned tbis_flags;
 # define TBIS_HUGE		0x10
 # define TBIS_GIANT		0x20
 #endif
+#if defined(FEAT_TOOLBAR) && defined(FEAT_WINUI)
+EXTERN char_u	*p_tbst;	// 'toolbariconstyle'
+#endif
 EXTERN long	p_ttyscroll;	// 'ttyscroll'
 #if defined(UNIX) || defined(VMS)
 EXTERN char_u	*p_ttym;	// 'ttymouse'

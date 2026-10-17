@@ -1,157 +1,142 @@
-# [![Vim The editor](https://github.com/vim/vim/raw/master/runtime/vimlogo.gif)](https://www.vim.org)
+# JoliVIM
 
-[![Github Build status](https://github.com/vim/vim/workflows/GitHub%20CI/badge.svg)](https://github.com/vim/vim/actions?query=workflow%3A%22GitHub+CI%22)
-[![Coverage Status](https://codecov.io/gh/vim/vim/coverage.svg?branch=master)](https://codecov.io/gh/vim/vim?branch=master)
-[![Coverity Scan](https://scan.coverity.com/projects/241/badge.svg)](https://scan.coverity.com/projects/vim)
-[![Debian CI](https://badges.debian.net/badges/debian/testing/vim/version.svg)](https://buildd.debian.org/vim)
-[![Packages](https://repology.org/badge/tiny-repos/vim.svg)](https://repology.org/metapackage/vim)
-[![Fossies codespell report](https://fossies.org/linux/test/vim-master.tar.gz/codespell.svg)](https://fossies.org/linux/test/vim-master.tar.gz/codespell.html)
+**JoliVIM** is a playful fork of [Vim](https://www.vim.org), made for fun by
+**Sylvain Cresto**. It specializes Vim's Windows GUI (the `jvim` binary) for **Windows 11**,
+giving it a modern **WinUI 3** look while staying 100% Vim underneath.
 
-If you find a bug or want to discuss the best way to add a new feature, please
-[open an issue](https://github.com/vim/vim/issues/new/choose).
-If you have a question or want to discuss the best way to do something with
-Vim, you can join [`#vim`](https://web.libera.chat/#vim),
-[reddit.com/r/vim](https://reddit.com/r/vim),
-use [StackExchange](https://vi.stackexchange.com/),
-or one of the [Maillists](https://www.vim.org/community.php).
+It is **open source and freely distributable**, making Vim look as good as it
+edits, just my personal opinion, of course :-)
 
-## What is Vim?
+JoliVIM is an **independent project and is not affiliated with the Vim
+project**.
 
-Vim is a greatly improved version of the good old UNIX editor
-[Vi](https://en.wikipedia.org/wiki/Vi_%28text_editor%29).  Many new
-features have been added: multi-level undo, syntax highlighting, command line
-history, on-line help, spell checking, filename completion, block operations,
-script language, etc.  There is also a Graphical User Interface (GUI)
-available.  Still, Vi compatibility is maintained, those who have Vi "in the
-fingers" will feel at home.
-See [`runtime/doc/vi_diff.txt`](runtime/doc/vi_diff.txt) for differences with
-Vi.
+Repository: <https://github.com/scresto09/jolivim>
 
-This editor is very useful for editing programs and other plain text files.
-All commands are given with normal keyboard characters, so those who can type
-with ten fingers can work very fast.  Additionally, function keys can be
-mapped to commands by the user, and the mouse can be used.
+For issues, please visit <https://github.com/scresto09/jolivim/issues>
 
-Vim also aims to provide a (mostly) POSIX-compatible vi implementation, when
-compiled with a minimal feature set (typically called vim.tiny), which is used
-by many Linux distributions as the default vi editor.
+---
 
-Vim runs under MS-Windows (7, 8, 10, 11), macOS, Haiku, VMS and almost all
-flavours of UNIX.  Porting to other systems should not be very difficult.
-Older versions of Vim run on MS-DOS, MS-Windows 95/98/Me/NT/2000/XP/Vista,
-Amiga DOS, Atari MiNT, BeOS, RISC OS and OS/2.  These are no longer maintained.
+## What's different from Vim
 
-For Vim9 script see [README_VIM9](README_VIM9.md).
+The original Vim README.md has been renamed to [README.VIM.md](README.VIM.md).
 
-## Distribution
+All of this is Windows-only and enabled through the `FEAT_WINUI` build flag:
 
-You can often use your favorite package manager to install Vim.  On Mac and
-Linux a small version of Vim is pre-installed, you still need to install Vim
-if you want more features.
+- **Tabs in the title bar** (like Notepad), with a per-tab right-click menu
+  (New tab / Close tab / Close other tabs / Close tabs to the right / Copy file
+  name).
+- **Modern menu bar, toolbar icons, context menus and dialogs** (WinUI 3).
+- **Two toolbar icon sets**, chosen with the `'toolbariconstyle'` (`tbst`)
+  option: the modern **Windows 11** glyphs (Segoe Fluent Icons) or the
+  **classic** Vim bitmaps. Activate with `:set tbst=win11`, `:set tbst=classic`
+  or `:set tbst=auto` (the default: the Windows 11 glyphs when the icon font is
+  available, the classic bitmaps otherwise). In a vimrc shared with a regular
+  Vim, guard it so Vim doesn't error: `if has('winui') | set tbst=win11 | endif`.
+- **Find/replace bar** floating over the text, with search history.
+- **Light / dark theme that follows the Windows setting** (title bar, tabs,
+  menu, toolbar, dialogs), switching live.
+- **"Copy file name"** from the status-line right-click menu.
 
-There are separate distributions for Unix, PC, Amiga and some other systems.
-This `README.md` file comes with the runtime archive.  It includes the
-documentation, syntax files and other files that are used at runtime.  To run
-Vim you must get either one of the binary archives or a source archive.
-Which one you need depends on the system you want to run it on and whether you
-want or must compile it yourself.  Check https://www.vim.org/download.php for
-an overview of currently available distributions.
+Everything gracefully **falls back to the classic Win32 UI** when the WinUI
+runtime is not available.
 
-Some popular places to get the latest Vim:
-* Check out the git repository from [GitHub](https://github.com/vim/vim).
-* Get the source code as an [archive](https://github.com/vim/vim/tags).
-* Get a Windows executable from the
-[vim-win32-installer](https://github.com/vim/vim-win32-installer/releases) repository.
+---
 
-## Compiling
+## Prerequisites
 
-If you obtained a binary distribution you don't need to compile Vim.  If you
-obtained a source distribution, all the stuff for compiling Vim is in the
-[`src`](./src/) directory.  See [`src/INSTALL`](./src/INSTALL) for instructions.
+- **Windows 11** (Windows 10 may work but is not the target).
+- **Visual Studio** with the MSVC C++ toolchain (the WinUI code is C++/WinRT and
+  only builds with MSVC — MinGW cannot build it).
+- The **Windows App SDK** package, installed with:
 
-## Installation
+  ```
+  nuget install Microsoft.WindowsAppSDK
+  ```
 
-See one of these files for system-specific instructions.  Either in the
-[READMEdir directory](./READMEdir/) (in the repository) or
-the top directory (if you unpack an archive):
+  It is searched for in the current directory, its parents and the NuGet cache;
+  otherwise set `WINUI_SDK=<directory where nuget installed it>`.
+- At **runtime**, the **Windows App Runtime** must be present on the machine
+  (otherwise JoliVIM runs as classic Win32 Vim). These DLLs ship next to the
+  executable:
+  - `Microsoft.WindowsAppRuntime.Bootstrap.dll`
+  - `libintl-8.dll`, `libiconv-2.dll` (for translated dialog text via gettext,
+    downloaded and added by the MSIX package build, see below)
+
+See `src/INSTALLpc.txt` for the general Windows build setup, which must be
+adapted for this version.
+
+---
+
+## Building
+
+From a **Visual Studio x64 Native Tools** command prompt, in `src/`:
 
 ```
-README_ami.txt		Amiga
-README_unix.txt		Unix
-README_dos.txt		MS-DOS and MS-Windows
-README_mac.txt		Macintosh
-README_haiku.txt	Haiku
-README_vms.txt		VMS
+nmake -f Make_mvc.mak GUI=yes WINUI=yes
 ```
 
-There are other `README_*.txt` files, depending on the distribution you used.
+For a debug build (`jvimd.exe`):
 
-## Documentation
+```
+nmake -f Make_mvc.mak GUI=yes WINUI=yes DEBUG=yes
+```
 
-The Vim tutor is a one hour training course for beginners.  Often it can be
-started as `vimtutor`.  See `:help tutor` for more information.
+`WINUI=yes` requires `GUI=yes`. Omitting `WINUI=yes` builds a plain Win32 Vim GUI.
 
-The best is to use `:help` in Vim.  If you don't have an executable yet, read
-[`runtime/doc/help.txt`](./runtime/doc/help.txt).
-It contains pointers to the other documentation files.
-The User Manual reads like a book and is recommended to learn to use
-Vim.  See `:help user-manual`.
+The runtime files (`joli.png`, the modified
+`menu.vim`, …) must be reachable through `'runtimepath'` (e.g. `$VIMRUNTIME`).
 
-## Copying
+### MSIX package
 
-Vim is Charityware.  You can use and copy it as much as you like, but you are
-encouraged to make a donation to help orphans in Uganda.  Please read the file
-[`runtime/doc/uganda.txt`](./runtime/doc/uganda.txt)
-for details (do `:help uganda` inside Vim).
+The whole JoliVIM (jvim, vim, the runtime files and the "Edit in JoliVIM" entry
+of the Windows 11 context menu) can be packaged as a single MSIX, without
+installer, e.g. for the Microsoft Store:
 
-Summary of the license: There are no restrictions on using or distributing an
-unmodified copy of Vim.  Parts of Vim may also be distributed, but the license
-text must always be included.  For modified versions, a few restrictions apply.
-The license is GPL compatible, you may compile Vim with GPL libraries and
-distribute it.
+```
+nmake -f Make_mvc.mak GUI=yes WINUI=yes VIMDLL=yes msix
+```
 
-## Sponsoring
+This needs `makeappx.exe` and `makepri.exe` from the Windows SDK and creates
+the unsigned
+`JoliVIM_<version>_<arch>.msix`. The Store signs it. The package identity
+defaults to the one reserved in Partner Center
+(`SylvainCresto.JoliVIM`, publisher `CN=4D7AE54D-4897-4AAF-AD4A-96A83C99020F`),
+so the package is ready to upload as is; override it with `MSIX_NAME=`,
+`PUBLISHER=` and `MSIX_PUBLISHERNAME=` if needed (e.g. for a self-signed test
+build, set `PUBLISHER=` to the test certificate's subject).
+To test it without signing, enable the Developer Mode and register the staging
+directory (in the object directory, here `ObjDXWAMD64`):
 
-Fixing bugs and adding new features takes a lot of time and effort.  To show
-your appreciation for the work and motivate developers to continue working on
-Vim please send a donation.
+```
+Add-AppxPackage -Register ObjDXWAMD64\msix\AppxManifest.xml
+```
 
-The money you donated will be mainly used to help children in Uganda.  See
-[`runtime/doc/uganda.txt`](./runtime/doc/uganda.txt).  But at the same time
-donations increase the development team motivation to keep working on Vim!
+`jvim` and `vim` are then available in a command prompt.  The package depends
+on the Windows App Runtime used for building: the Store installs it, otherwise
+it must already be installed.  See `src/msix/make_msix.ps1`.
 
-For the most recent information about sponsoring look on the Vim web site:
-	https://www.vim.org/sponsor/
+The package supports localization: the build downloads gettext and iconv
+(checked against their SHA-256, cached in `src/msix/cache`), adds
+`libintl-8.dll`, `libiconv-2.dll` and their licenses, and compiles the
+translations of `src/po` to `lang/<language>/LC_MESSAGES/vim.mo`. The DLLs come from
+[gettext-iconv-windows](https://github.com/mlocati/gettext-iconv-windows) for
+x64 and from the MSYS2 `clangarm64` packages for arm64. Only x64 and arm64 are
+supported, there is no 32-bit package.
 
-## Contributing
+---
 
-If you would like to help make Vim better, see the
-[CONTRIBUTING.md](./CONTRIBUTING.md) file.
+## Status
 
-## Information
+This is an **experimental, for-fun fork**. Use at your own risk, and enjoy! :-)
+It tracks upstream Vim over time, so no local patch numbers are added to
+`version.c`.
 
-If you are on macOS, you can use [MacVim](https://macvim.org).
+---
 
-The latest news about Vim can be found on the Vim home page:
-	https://www.vim.org/
+## Credits & license
 
-If you have problems, have a look at the Vim documentation or tips:
-	https://www.vim.org/docs.php
-	https://vim.fandom.com/wiki/Vim_Tips_Wiki
-
-If you still have problems or any other questions, use one of the mailing
-lists to discuss them with Vim users and developers:
-	https://www.vim.org/maillist.php
-
-If nothing else works, report bugs directly to the vim-dev mailing list:
-	`<vim-dev@vim.org>`
-
-## Main author
-
-Most of Vim was created by Bram Moolenaar `<Bram@vim.org>`
-[Bram-Moolenaar](https://vimhelp.org/version9.txt.html#Bram-Moolenaar)
-
-Send any other comments, patches, flowers and suggestions to the vim-dev mailing list:
-	`<vim-dev@vim.org>`
-
-This is `README.md` for version 9.2 of Vim: Vi IMproved.
+JoliVIM is built on the wonderful **Vim** by Bram Moolenaar et al. The Vim license
+applies to the original Vim code (`:help license`); the JoliVIM-specific additions
+are distributed under the same terms.
+Please support the original Vim project and consider helping children in Uganda.
+See `:help uganda`.

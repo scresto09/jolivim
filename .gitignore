@@ -33,6 +33,16 @@ src/obj*/pathdef.c
 src/Obj*/pathdef.c
 gvimext.dll
 gvimext.lib
+jvimext11*.dll
+jvimext11*.lib
+jvimext11*.exe
+jvimext11.msix
+src/*.msix
+src/msix/cache/
+src/msix/staging/
+src/msix/staging.pri/
+src/msix/staging.pri.xml
+src/JvimExt11/appx/
 gvim.lib
 runtime/doc/uganda.nsis.txt
 nsis/icons/*

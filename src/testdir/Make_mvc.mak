@@ -7,9 +7,16 @@
 # included common tools
 !INCLUDE ..\auto\nmake\tools.mak
 
-# Testing may be done with a debug build 
-!IF EXIST(..\\vimd.exe) && !EXIST(..\\vim.exe)
+# Testing may be done with a debug build, or with the JoliVIM GUI binary
+# (jvim.exe / jvimd.exe) when no console vim.exe was built.
+!IF EXIST(..\\vim.exe)
+VIMPROG = ..\\vim.exe
+!ELSEIF EXIST(..\\vimd.exe)
 VIMPROG = ..\\vimd.exe
+!ELSEIF EXIST(..\\jvim.exe)
+VIMPROG = ..\\jvim.exe
+!ELSEIF EXIST(..\\jvimd.exe)
+VIMPROG = ..\\jvimd.exe
 !ELSE
 VIMPROG = ..\\vim.exe
 !ENDIF

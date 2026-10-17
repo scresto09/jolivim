@@ -1306,22 +1306,22 @@ $(OUTDIR)/%.o : %.c $(INCL)
 	$(CC) -c $(CFLAGS) $< -o $@
 
 ifeq ($(VIMDLL),yes)
-$(OUTDIR)/vimresc.o:	vim.rc vim.manifest version.h gui_w32_rc.h vim.ico
+$(OUTDIR)/vimresc.o:	vim.rc vim.manifest version.h gui_w32_rc.h joli.ico
 	$(WINDRES) $(WINDRES_FLAGS) $(DEFINES) -UFEAT_GUI_MSWIN \
 	    --input-format=rc --output-format=coff -i vim.rc -o $@
 
-$(OUTDIR)/vimresg.o:	vim.rc vim.manifest version.h gui_w32_rc.h vim.ico
+$(OUTDIR)/vimresg.o:	vim.rc vim.manifest version.h gui_w32_rc.h joli.ico
 	$(WINDRES) $(WINDRES_FLAGS) $(DEFINES) \
 	    --input-format=rc --output-format=coff -i vim.rc -o $@
 
 $(OUTDIR)/vimresd.o:	vim.rc version.h gui_w32_rc.h \
-			tools.bmp tearoff.bmp vim.ico vim_error.ico \
+			tools.bmp tearoff.bmp joli.ico vim_error.ico \
 			vim_alert.ico vim_info.ico vim_quest.ico
 	$(WINDRES) $(WINDRES_FLAGS) $(DEFINES) -DRCDLL -DVIMDLLBASE=\\\"$(VIMDLLBASE)\\\" \
 	    --input-format=rc --output-format=coff -i vim.rc -o $@
 else
 $(OUTDIR)/vimres.o:	vim.rc vim.manifest version.h gui_w32_rc.h \
-			tools.bmp tearoff.bmp vim.ico vim_error.ico \
+			tools.bmp tearoff.bmp joli.ico vim_error.ico \
 			vim_alert.ico vim_info.ico vim_quest.ico
 	$(WINDRES) $(WINDRES_FLAGS) $(DEFINES) \
 	    --input-format=rc --output-format=coff -i vim.rc -o $@

@@ -1,4 +1,4 @@
-*options.txt*	For Vim version 9.2.  Last change: 2026 Sep 30
+*options.txt*	For Vim version 9.2.  Last change: 2026 Oct 12
 
 
 		  VIM REFERENCE MANUAL	  by Bram Moolenaar
@@ -8238,7 +8238,7 @@ A jump table for the options with a short description can be found at |Q_op|.
 	set and to the Vim default value when 'compatible' is reset.
 
 						*'showtabline'* *'stal'*
-'showtabline' 'stal'	number	(default 1)
+'showtabline' 'stal'	number	(default 2)
 			global
 	The value of this option specifies when the line with tab page labels
 	will be displayed:
@@ -9762,6 +9762,39 @@ A jump table for the options with a short description can be found at |Q_op|.
 		:set guioptions-=T
 <	Also see |gui-toolbar|.
 
+						*'toolbariconstyle'* *'tbst'*
+'toolbariconstyle' 'tbst'	string	(default "auto")
+				global
+				{only available when compiled with the WinUI
+				feature on MS-Windows}
+	Controls which icons are used for the builtin toolbar buttons.  The
+	possible values are:
+		win11		Use the Windows 11 icons from the system icon
+				font ("Segoe Fluent Icons", or "Segoe MDL2
+				Assets").  The glyph is always used for the
+				standard buttons; a "bitmaps/{name}.bmp" file
+				is used only for a custom button that has no
+				glyph.
+		classic		Use the classic bitmaps (the ones compiled
+				into Vim and those found in 'runtimepath').
+		auto		Use a user-provided icon when there is one
+				(the "icon=" argument of |:menu| or a
+				"bitmaps/{name}.bmp" file), otherwise the
+				Windows 11 glyph when the icon font is
+				installed, otherwise the classic bitmaps.
+				This is the default.
+	With "win11" and "auto", when the icon font is not installed the
+	classic bitmaps are used instead.  A bitmap given explicitly with the
+	"icon=" argument of |:menu| always takes priority over the glyph.
+	See |toolbar-icon|.
+	This option has no effect in the other GUIs.
+	This option is specific to JoliVIM; a regular Vim does not know it.
+	When setting it in a vimrc shared with a regular Vim, guard it with
+	has('winui') so that Vim does not give an |E518| error: >
+		if has('winui')
+		    set tbst=win11
+		endif
+<
 						*'toolbariconsize'* *'tbis'*
 'toolbariconsize' 'tbis'	string	(default "small")
 				global

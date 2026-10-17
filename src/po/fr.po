@@ -8353,3 +8353,63 @@ msgstr "nom de la bibliothèque dynamique Tcl"
 
 msgid "name of the MzScheme dynamic library"
 msgstr "nom de la bibliothèque dynamique MzScheme"
+
+# JoliVIM: find bar and dialogs (gui_w32_winui.c)
+
+msgid "Close"
+msgstr "Fermer"
+
+msgid "Options"
+msgstr "Options"
+
+msgid "Select Font"
+msgstr "Choisir une police"
+
+msgid "Size"
+msgstr "Taille"
+
+msgid "Bold"
+msgstr "Gras"
+
+msgid "Italic"
+msgstr "Italique"
+
+# JoliVIM: about dialog (gui_w32_winui.c)
+
+msgid ", a playful fork of Vim by Sylvain Cresto"
+msgstr ", un fork ludique de Vim par Sylvain Cresto"
+
+msgid "It's open source and freely distributable, making Vim look as"
+msgstr "C'est un logiciel libre, qui rend Vim aussi beau"
+
+msgid "good as it edits. But no offense, it's just for fun ;-)"
+msgstr "qu'il est efficace. Sans offense, c'est juste pour le plaisir ;-)"
+
+msgid "It's an independent project not affiliated with the Vim project"
+msgstr "C'est un projet indépendant, non affilié au projet Vim"
+
+# JoliVIM: intro screen (version.c)
+
+msgid "JoliVIM is open source and freely distributable"
+msgstr "JoliVIM est un logiciel libre"
+
+# JoliVIM: tab and status line context menus (gui_w32.c)
+
+msgid "Copy file name"
+msgstr "Copier le nom du fichier"
+
+msgid "Close other tabs"
+msgstr "Fermer les autres onglets"
+
+msgid "Close tabs to the right"
+msgstr "Fermer les onglets à droite"
+
+msgid "Move left"
+msgstr "Déplacer à gauche"
+
+msgid "Move right"
+msgstr "Déplacer à droite"
+
+# JoliVIM: font preview sample, French pangram (like the Pango locale sample)
+msgid "The quick brown fox jumps over the lazy dog"
+msgstr "Voix ambiguë d'un c½ur qui au zéphyr préfère les jattes de kiwis"

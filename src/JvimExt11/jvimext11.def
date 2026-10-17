@@ -1,0 +1,4 @@
+LIBRARY jvimext11
+EXPORTS
+    DllGetClassObject   PRIVATE
+    DllCanUnloadNow     PRIVATE

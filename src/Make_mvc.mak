@@ -28,6 +28,27 @@
 #	Color emoji support: COLOR_EMOJI=yes
 #	  (default is yes if DIRECTX=yes, requires WinSDK 8.1 or later.)
 #
+#	WinUI 3 popup menu: WINUI=yes (default is no, requires GUI=yes)
+#	  Uses the package from "nuget install Microsoft.WindowsAppSDK",
+#	  searched for in the current directory, its parents and the NuGet
+#	  cache, or set WINUI_SDK=[directory where nuget installed it].
+#	  Requires the Windows App Runtime at runtime, falls back to the
+#	  Win32 popup menu when it is not available.  See INSTALLpc.txt.
+#
+#	Windows 11 context menu entry: JVIMEXT11=yes (default is no)
+#	  Builds JvimExt11\jvimext11.dll, JvimExt11\jvimext11_cfg.exe and the
+#	  unsigned package JvimExt11\jvimext11.msix.  Requires makeappx.exe
+#	  from the Windows SDK in the PATH.  PUBLISHER=[certificate subject]
+#	  for signing the package (default is "CN=Vim Test").
+#	  See JvimExt11\README.txt.
+#
+#	MSIX package of the whole Vim: "nmake -f Make_mvc.mak GUI=yes msix"
+#	  Creates the unsigned JoliVIM_<version>_<arch>.msix with jvim.exe,
+#	  the runtime files and the Windows 11 context menu entry, without
+#	  installer.  Use VIMDLL=yes to include vim.exe.  Requires makeappx.exe.
+#	  See msix\make_msix.ps1.  "nmake -f Make_mvc.mak GUI=yes testmsix"
+#	  checks it, see msix\test_msix.ps1.
+#
 #	OLE interface: OLE=yes (usually with GUI=yes)
 #
 #	IME support: IME=yes	(default is yes)
@@ -47,7 +68,7 @@
 #
 #
 #	DLL support (EXPERIMENTAL): VIMDLL=yes (default is no)
-#	  Creates vim{32,64}.dll, and stub gvim.exe and vim.exe.
+#	  Creates vim{32,64}.dll, and stub jvim.exe and vim.exe.
 #	  The shared codes between the GUI and the console are built into
 #	  the DLL.  This reduces the total file size and memory usage.
 #	  Also supports `vim -g` and the `:gui` command.
@@ -205,7 +226,7 @@ PATCHLEVEL = 0
 ! ENDIF
 !ENDIF
 
-!MESSAGE Vim version: $(MAJOR).$(MINOR).$(PATCHLEVEL)
+!MESSAGE Building JoliVIM based on Vim version: $(MAJOR).$(MINOR).$(PATCHLEVEL)
 
 !IF "$(VIMDLL)" == "yes"
 GUI = yes
@@ -226,6 +247,9 @@ OBJDIR = .\ObjC
 !ENDIF
 !IF "$(DIRECTX)" == "yes" && "$(GUI)" == "yes"
 OBJDIR = $(OBJDIR)X
+!ENDIF
+!IF "$(WINUI)" == "yes" && "$(GUI)" == "yes"
+OBJDIR = $(OBJDIR)W
 !ENDIF
 !IF "$(OLE)" == "yes"
 OBJDIR = $(OBJDIR)O
@@ -483,6 +507,19 @@ DIRECTX_DEFS = $(DIRECTX_DEFS) -DFEAT_DIRECTX_COLOR_EMOJI
 !  ENDIF
 DIRECTX_INCL = gui_dwrite.h
 DIRECTX_OBJ = $(OUTDIR)\gui_dwrite.obj
+! ENDIF
+
+# WinUI 3 popup menu
+! IF "$(WINUI)" == "yes"
+WINUI_DEFS = -DFEAT_WINUI
+WINUI_INCL = gui_winui.h gui_w32_winui.h
+WINUI_OBJ = $(OUTDIR)\gui_winui.obj $(OUTDIR)\gui_w32_winui.obj
+WINUI_LIB = windowsapp.lib
+WINUI_GEN = $(OUTDIR)\winui
+WINUI_CXXFLAGS = /std:c++20 /EHsc /permissive- /bigobj -I$(WINUI_GEN)\include
+!  IFDEF WINUI_SDK
+WINUI_SDK_ARG = -SdkDir "$(WINUI_SDK)"
+!  ENDIF
 ! ENDIF
 
 # Only allow XPM for a GUI build.
@@ -875,12 +912,13 @@ CFLAGS = $(CFLAGS) -DFEAT_GUI_MSWIN
 RCFLAGS = $(RCFLAGS) -DFEAT_GUI_MSWIN
 ! IF "$(VIMDLL)" == "yes"
 SUBSYSTEM_CON = console
-GVIM = g$(VIM)
+GVIM = j$(VIM)
 CUI_INCL = iscygpty.h
 CUI_OBJ = $(OUTDIR)\iscygpty.obj
 RCFLAGS = $(RCFLAGS) -DVIMDLL
 ! ELSE
-VIM = g$(VIM)
+VIM = j$(VIM)
+GVIM = $(VIM)
 ! ENDIF
 GUI_INCL = \
 	gui.h
@@ -930,6 +968,13 @@ MAKEFLAGS_TOOLS = $(MAKEFLAGS_TOOLS) SUBSYSTEM_VER=$(SUBSYSTEM_VER)
 CFLAGS = $(CFLAGS) $(DIRECTX_DEFS)
 GUI_INCL = $(GUI_INCL) $(DIRECTX_INCL)
 GUI_OBJ = $(GUI_OBJ) $(DIRECTX_OBJ)
+!ENDIF
+
+!IF "$(GUI)" == "yes" && "$(WINUI)" == "yes"
+CFLAGS = $(CFLAGS) $(WINUI_DEFS)
+GUI_INCL = $(GUI_INCL) $(WINUI_INCL)
+GUI_OBJ = $(GUI_OBJ) $(WINUI_OBJ)
+GUI_LIB = $(GUI_LIB) $(WINUI_LIB)
 !ENDIF
 
 # iconv.dll library (dynamically loaded)
@@ -1303,7 +1348,7 @@ LINKARGS1 = $(LINKARGS1) /LTCG:STATUS
 !ENDIF
 
 !IF "$(CPU)" == "AMD64" && "$(GUI)" == "yes"
-# This option is required for VC2012 or later so that 64-bit gvim can
+# This option is required for VC2012 or later so that 64-bit jvim can
 # accept D&D from 32-bit applications.  NOTE: This disables 64-bit ASLR,
 # therefore the security level becomes as same as VC2010.
 LINKARGS1 = $(LINKARGS1) /HIGHENTROPYVA:NO
@@ -1318,13 +1363,18 @@ MAIN_TARGET = $(VIM).exe
 # Target to run individual tests.
 VIMTESTTARGET = $(VIM).exe
 
+!IF "$(JVIMEXT11)" == "yes"
+JVIMEXT11_TARGET = JvimExt11/jvimext11.msix
+!ENDIF
+
 all: $(MAIN_TARGET) \
 	vimrun.exe \
 	install.exe \
 	uninstall.exe \
 	xxd/xxd.exe \
 	tee/tee.exe \
-	GvimExt/gvimext.dll
+	GvimExt/gvimext.dll \
+	$(JVIMEXT11_TARGET)
 
 # To get around the command line limit: Make use of nmake's response files to
 # capture the arguments for $(LINK) in a file  using the @<<ARGS<< syntax.
@@ -1409,6 +1459,70 @@ GvimExt/gvimext.dll: GvimExt/gvimext.cpp GvimExt/gvimext.rc GvimExt/gvimext.h
 	$(MAKE) -lf Make_mvc.mak $(MAKEFLAGS_GVIMEXT)
 	cd ..
 
+# Windows 11 context menu entry and its package, only with JVIMEXT11=yes.
+MAKEFLAGS_JVIMEXT11 = $(MAKEFLAGS_GVIMEXT) CPU=$(CPU) PATCHLEVEL=$(PATCHLEVEL)
+!IFDEF PUBLISHER
+MAKEFLAGS_JVIMEXT11 = $(MAKEFLAGS_JVIMEXT11) PUBLISHER="$(PUBLISHER)"
+!ENDIF
+
+JVIMEXT11_SRC = JvimExt11/jvimext11.cpp JvimExt11/jvimext11.h \
+		JvimExt11/jvimext11_cfg.cpp JvimExt11/jvimext11.rc \
+		JvimExt11/jvimext11_cfg.rc JvimExt11/version.rc \
+		JvimExt11/resource.h JvimExt11/lang/en.rc JvimExt11/lang/fr.rc \
+		version.h
+
+JvimExt11/jvimext11.msix: $(JVIMEXT11_SRC) JvimExt11/AppxManifest.xml.in
+	cd JvimExt11
+	$(MAKE) -lf Make_mvc.mak $(MAKEFLAGS_JVIMEXT11) all msix
+	cd ..
+
+# Without the package, for the MSIX package of the whole Vim.
+JvimExt11/jvimext11.dll: $(JVIMEXT11_SRC)
+	cd JvimExt11
+	$(MAKE) -lf Make_mvc.mak $(MAKEFLAGS_JVIMEXT11) all
+	cd ..
+
+# "nmake -f Make_mvc.mak GUI=yes msix": MSIX package of the whole Vim, with
+# the Windows 11 context menu entry, see msix\make_msix.ps1.  Use VIMDLL=yes
+# to include vim.exe.  Options:
+#   PUBLISHER=		subject of the certificate used to sign the package
+#   MSIX_NAME=		identity name of the package (default "JoliVIM")
+#   MSIX_PUBLISHERNAME=	publisher display name
+MSIX_FILES = $(MAIN_TARGET) vimrun.exe xxd\xxd.exe tee\tee.exe
+MSIX_ARGS = -Files "$(MSIX_FILES)" -Cpu $(CPU) \
+	-Version $(MAJOR).$(MINOR).$(PATCHLEVEL).0 -StagingDir $(OUTDIR)\msix
+!IFDEF PUBLISHER
+MSIX_ARGS = $(MSIX_ARGS) -Publisher "$(PUBLISHER)"
+!ENDIF
+!IFDEF MSIX_NAME
+MSIX_ARGS = $(MSIX_ARGS) -Name "$(MSIX_NAME)"
+!ENDIF
+!IFDEF MSIX_PUBLISHERNAME
+MSIX_ARGS = $(MSIX_ARGS) -PublisherName "$(MSIX_PUBLISHERNAME)"
+!ENDIF
+!IF "$(WINUI)" == "yes"
+MSIX_ARGS = $(MSIX_ARGS) -WinUIInclude $(WINUI_GEN)\include
+!ENDIF
+
+# Always rebuilt: the target name collides with the msix directory, so without
+# the FORCE prerequisite nmake would consider it up to date and skip packaging.
+msix: $(MAIN_TARGET) vimrun.exe xxd/xxd.exe tee/tee.exe \
+		JvimExt11/jvimext11.dll FORCE
+	powershell -NoProfile -ExecutionPolicy Bypass -File msix\make_msix.ps1 $(MSIX_ARGS)
+
+# Pseudotarget with no file: always out of date, used to force a rebuild.
+FORCE:
+
+# "nmake -f Make_mvc.mak GUI=yes testmsix": check the sources of the MSIX
+# package and, when it was built, its content, see msix\test_msix.ps1.
+TESTMSIX_ARGS =
+!IF EXIST($(OUTDIR)\msix\AppxManifest.xml)
+TESTMSIX_ARGS = -StagingDir $(OUTDIR)\msix
+!ENDIF
+
+testmsix:
+	powershell -NoProfile -ExecutionPolicy Bypass -File msix\test_msix.ps1 $(TESTMSIX_ARGS)
+
 
 tags: notags
 	$(CTAGS) $(TAGS_FILES)
@@ -1439,11 +1553,13 @@ clean: testclean
 	- if exist $(VIMDLLBASE).map $(RM) $(VIMDLLBASE).map
 !ENDIF
 	- if exist vimrun.exe $(RM) vimrun.exe
+	- if exist Microsoft.WindowsAppRuntime.Bootstrap.dll $(RM) Microsoft.WindowsAppRuntime.Bootstrap.dll
 	- if exist install.exe $(RM) install.exe
 	- if exist uninstall.exe $(RM) uninstall.exe
 	- if exist if_perl.c $(RM) if_perl.c
 	- if exist auto\if_perl.c $(RM) auto\if_perl.c
 	- if exist dosinst.exe $(RM) dosinst.exe
+	- if exist *.msix $(RM) *.msix
 	cd xxd
 	$(MAKE) -lf Make_mvc.mak clean
 	cd ..
@@ -1451,6 +1567,9 @@ clean: testclean
 	$(MAKE) -lf Make_mvc.mak clean
 	cd ..
 	cd GvimExt
+	$(MAKE) -lf Make_mvc.mak clean
+	cd ..
+	cd JvimExt11
 	$(MAKE) -lf Make_mvc.mak clean
 	cd ..
 
@@ -1479,7 +1598,7 @@ test:
 
 testgvim testgui:
 	cd testdir
-	$(MAKE) -lf Make_mvc.mak "VIMPROG=..\gvim.exe"
+	$(MAKE) -lf Make_mvc.mak "VIMPROG=..\$(GVIM).exe"
 	cd ..
 
 testtiny:
@@ -1489,7 +1608,7 @@ testtiny:
 
 testgvimtiny:
 	cd testdir
-	$(MAKE) -lf Make_mvc.mak "VIMPROG=..\gvim.exe" tiny
+	$(MAKE) -lf Make_mvc.mak "VIMPROG=..\$(GVIM).exe" tiny
 	cd ..
 
 testclean:
@@ -1662,6 +1781,21 @@ $(OUTDIR)/gui_beval.obj: $(OUTDIR) gui_beval.c $(INCL) $(GUI_INCL)
 $(OUTDIR)/gui_w32.obj: $(OUTDIR) gui_w32.c $(INCL) $(GUI_INCL) version.h
 
 $(OUTDIR)/gui_dwrite.obj: $(OUTDIR) gui_dwrite.cpp gui_dwrite.h
+
+!IF "$(WINUI)" == "yes"
+# Generate the C++/WinRT headers from the Windows App SDK NuGet package.
+$(WINUI_GEN)\winui.stamp: $(OUTDIR) winui_gen.ps1
+	powershell -NoProfile -ExecutionPolicy Bypass -File winui_gen.ps1 -OutDir $(WINUI_GEN) -DllDir . -Cpu $(CPU) $(WINUI_SDK_ARG)
+
+# Compiled without /Zl, the C++ runtime library is needed.
+$(OUTDIR)/gui_winui.obj: $(OUTDIR) gui_winui.cpp gui_winui.h \
+		$(WINUI_GEN)\winui.stamp
+	$(CC) $(CFLAGS_OUTDIR:/Zl=) $(WINUI_CXXFLAGS) gui_winui.cpp
+
+$(OUTDIR)/gui_w32_winui.obj: $(OUTDIR) gui_w32_winui.c gui_w32_winui.h version.h \
+		gui_winui.h $(INCL)
+	$(CC) $(CFLAGS_OUTDIR) gui_w32_winui.c
+!ENDIF
 
 $(OUTDIR)/if_cscope.obj: $(OUTDIR) if_cscope.c $(INCL)
 
@@ -1873,21 +2007,21 @@ $(OUTDIR)/xpm_w32.obj: $(OUTDIR) xpm_w32.c
 
 !IF "$(VIMDLL)" == "yes"
 $(OUTDIR)/vimc.res: $(OUTDIR) vim.rc vim.manifest version.h gui_w32_rc.h \
-				vim.ico
+				joli.ico
 	$(RC) /nologo /l 0x409 /Fo$@ $(RCFLAGS:-DFEAT_GUI_MSWIN=) vim.rc
 
 $(OUTDIR)/vimg.res: $(OUTDIR) vim.rc vim.manifest version.h gui_w32_rc.h \
-				vim.ico
+				joli.ico
 	$(RC) /nologo /l 0x409 /Fo$@ $(RCFLAGS) vim.rc
 
 $(OUTDIR)/vimd.res: $(OUTDIR) vim.rc version.h gui_w32_rc.h \
-			tools.bmp tearoff.bmp vim.ico vim_error.ico \
+			tools.bmp tearoff.bmp joli.ico vim_error.ico \
 			vim_alert.ico vim_info.ico vim_quest.ico
 	$(RC) /nologo /l 0x409 /Fo$@ $(RCFLAGS) \
 		-DRCDLL -DVIMDLLBASE=\"$(VIMDLLBASE)\" vim.rc
 !ELSE
 $(OUTDIR)/vim.res: $(OUTDIR) vim.rc vim.manifest version.h gui_w32_rc.h \
-			tools.bmp tearoff.bmp vim.ico vim_error.ico \
+			tools.bmp tearoff.bmp joli.ico vim_error.ico \
 			vim_alert.ico vim_info.ico vim_quest.ico
 	$(RC) /nologo /l 0x409 /Fo$@ $(RCFLAGS) vim.rc
 !ENDIF

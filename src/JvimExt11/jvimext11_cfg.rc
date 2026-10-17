@@ -1,0 +1,51 @@
+// vi:set ts=8 sts=4 sw=4 et:
+//
+// VIM - Vi IMproved    jvimext11 by Sylvain Cresto
+//
+// Do ":help uganda"  in Vim to read copying and usage conditions.
+// Do ":help credits" in Vim to see a list of people who contributed.
+//
+// Resources of jvimext11_cfg.exe, the settings window.  The texts of the
+// dialog are set at run time from the translated string tables (lang/*.rc).
+
+#include <windows.h>
+#include <commctrl.h>
+#include "resource.h"
+
+#define VI_FILETYPE     VFT_APP
+#define VI_DESCRIPTION  "JoliVIM context menu settings"
+#define VI_FILENAME     "jvimext11_cfg.exe"
+#include "version.rc"
+
+IDI_JVIMEXT11 ICON "jvimext11.ico"
+
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "jvimext11_cfg.manifest"
+
+IDD_SETTINGS DIALOGEX 0, 0, 310, 202
+STYLE DS_SHELLFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "JoliVIM"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    ICON            IDI_JVIMEXT11, IDC_HEADER_ICON, 10, 10, 21, 20
+    LTEXT           "JoliVIM", IDC_TITLE, 40, 8, 263, 14
+    LTEXT           "", IDC_SUBTITLE, 40, 24, 263, 9
+
+    GROUPBOX        "", IDC_GROUP_GVIM, 7, 42, 296, 62
+    LTEXT           "", IDC_GVIM_LABEL, 15, 55, 280, 9
+    EDITTEXT        IDC_GVIM_PATH, 15, 66, 222, 14, ES_AUTOHSCROLL
+    PUSHBUTTON      "", IDC_BROWSE, 242, 65, 53, 16
+    LTEXT           "", IDC_GVIM_STATUS, 15, 84, 280, 16
+
+    GROUPBOX        "", IDC_GROUP_OPEN, 7, 110, 296, 30
+    AUTOCHECKBOX    "", IDC_USE_TABS, 15, 123, 280, 10
+
+    CONTROL         "", -1, "Static", SS_ETCHEDHORZ, 7, 148, 296, 1
+    CONTROL         "", IDC_ABOUT, "SysLink", WS_TABSTOP, 7, 154, 296, 20
+
+    DEFPUSHBUTTON   "OK", IDOK, 196, 180, 50, 15
+    PUSHBUTTON      "", IDCANCEL, 253, 180, 50, 15
+END
+
+// Last: the LANGUAGE statements of these files apply to what follows them.
+#include "lang/en.rc"
+#include "lang/fr.rc"

@@ -201,6 +201,7 @@ NEW_TESTS = \
 	test_interrupt \
 	test_job_fails \
 	test_join \
+	test_jolivim \
 	test_json \
 	test_jumplist \
 	test_lambda \
@@ -489,6 +490,7 @@ NEW_TESTS_RES = \
 	test_interrupt.res \
 	test_job_fails.res \
 	test_join.res \
+	test_jolivim.res \
 	test_json.res \
 	test_jumplist.res \
 	test_lambda.res \

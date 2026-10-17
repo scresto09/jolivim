@@ -1,0 +1,20 @@
+// vi:set ts=8 sts=4 sw=4 et:
+//
+// VIM - Vi IMproved    jvimext11 by Sylvain Cresto
+//
+// Do ":help uganda"  in Vim to read copying and usage conditions.
+// Do ":help credits" in Vim to see a list of people who contributed.
+//
+// Resources of jvimext11.dll: the translated menu titles.
+
+#include <windows.h>
+#include "resource.h"
+
+#define VI_FILETYPE     VFT_DLL
+#define VI_DESCRIPTION  "Vim Windows 11 context menu entry"
+#define VI_FILENAME     "jvimext11.dll"
+#include "version.rc"
+
+// Last: the LANGUAGE statements of these files apply to what follows them.
+#include "lang/en.rc"
+#include "lang/fr.rc"
