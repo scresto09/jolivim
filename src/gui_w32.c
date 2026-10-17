@@ -6741,6 +6741,10 @@ gui_mch_init(void)
 	    vim_free(l5);
 	    vim_free(l6);
 	    vim_free(l7);
+	    // Notepad-like: always show the tab strip while the WinUI GUI is
+	    // active.  The global 'showtabline' default stays 1, so terminal and
+	    // classic Win32 builds behave like standard Vim.
+	    p_stal = 2;
 	}
 	// Follow the system theme for the window frame, scroll bars and menus
 	// (reuses Vim's dark-theme machinery), then force the non-client area

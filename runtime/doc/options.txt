@@ -8238,7 +8238,7 @@ A jump table for the options with a short description can be found at |Q_op|.
 	set and to the Vim default value when 'compatible' is reset.
 
 						*'showtabline'* *'stal'*
-'showtabline' 'stal'	number	(default 2)
+'showtabline' 'stal'	number	(default 1)
 			global
 	The value of this option specifies when the line with tab page labels
 	will be displayed:
@@ -8247,6 +8247,7 @@ A jump table for the options with a short description can be found at |Q_op|.
 		2: always
 	This is both for the GUI and non-GUI implementation of the tab pages
 	line.
+	The JoliVIM WinUI GUI forces this to 2 at startup.
 	See |tab-page| for more information about tab pages.
 
 						*'showtabpanel'* *'stpl'*

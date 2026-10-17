@@ -2426,7 +2426,7 @@ static struct vimoption options[] =
 			    {(char_u *)FALSE, (char_u *)TRUE} SCTX_INIT},
     {"showtabline", "stal", P_NUM|P_VI_DEF|P_RALL,
 			    (char_u *)&p_stal, PV_NONE, did_set_showtabline, NULL,
-			    {(char_u *)2L, (char_u *)0L} SCTX_INIT},
+			    {(char_u *)1L, (char_u *)0L} SCTX_INIT},
 #if defined(FEAT_TABPANEL)
     {"showtabpanel", "stpl", P_NUM|P_RALL,
 			    (char_u *)&p_stpl, PV_NONE, did_set_showtabpanel, NULL,
