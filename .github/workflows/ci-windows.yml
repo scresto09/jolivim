@@ -269,11 +269,11 @@ jobs:
         run: |
           PATH %LUA_DIR%;C:\msys64\%MSYSTEM%\bin;%PYTHON3_DIR%;%PATH%
           if "${{ matrix.GUI }}"=="yes" (
-            start /wait src\gvim -u NONE -i NONE -c "redir > version.txt | ver | q" || exit 1
+            start /wait src\jvim -u NONE -i NONE -c "redir > version.txt | ver | q" || exit 1
             type version.txt
             echo.
-            start /wait src\gvim -u NONE -i NONE -c "redir! > version.txt | so ci\if_ver-1.vim | q"
-            start /wait src\gvim -u NONE -i NONE -c "redir >> version.txt | so ci\if_ver-2.vim | q"
+            start /wait src\jvim -u NONE -i NONE -c "redir! > version.txt | so ci\if_ver-1.vim | q"
+            start /wait src\jvim -u NONE -i NONE -c "redir >> version.txt | so ci\if_ver-2.vim | q"
             type version.txt
             del version.txt
           ) else (
@@ -313,7 +313,7 @@ jobs:
       #    fi
 
       - parallel:
-        # Run gvim tests and vim tests in parallel
+        # Run jvim tests and vim tests in parallel
 
         - name: Test and show the result of testing gVim
           if: matrix.GUI == 'yes' || matrix.VIMDLL == 'yes'
@@ -327,9 +327,9 @@ jobs:
             cd src\testdir
             if "${{ matrix.features }}"=="TINY" (
               @rem Run only tiny tests.
-              nmake -nologo -f Make_mvc.mak tiny VIMPROG=..\gvim  || exit 1
+              nmake -nologo -f Make_mvc.mak tiny VIMPROG=..\jvim  || exit 1
             ) else (
-              nmake -nologo -f Make_mvc.mak VIMPROG=..\gvim || exit 1
+              nmake -nologo -f Make_mvc.mak VIMPROG=..\jvim || exit 1
             )
 
         - name: Test and show the result of testing Vim

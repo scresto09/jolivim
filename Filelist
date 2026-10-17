@@ -15,6 +15,7 @@ SRC_ALL =	\
 		.github/workflows/ci-macos.yml \
 		.github/workflows/ci-windows.yml \
 		.github/workflows/ci.yml \
+		.github/workflows/jolivim-msix.yml \
 		.github/workflows/codeql-analysis.yml \
 		.github/workflows/coverity.yml \
 		.github/workflows/link-check.yml \
@@ -622,6 +623,47 @@ SRC_DOS =	\
 		src/GvimExt/gvimext_ming.rc \
 		src/GvimExt/resource.h \
 		src/GvimExt/uninst.bat \
+		src/JvimExt11/AppxManifest.xml.in \
+		src/JvimExt11/Assets/JoliVIM150x150Logo.png \
+		src/JvimExt11/Assets/JoliVIM44x44Logo.png \
+		src/JvimExt11/Assets/StoreLogo.png \
+		src/JvimExt11/Make_ming.mak \
+		src/JvimExt11/Make_mvc.mak \
+		src/JvimExt11/README.txt \
+		src/JvimExt11/jvimext11.cpp \
+		src/JvimExt11/jvimext11.def \
+		src/JvimExt11/jvimext11.h \
+		src/JvimExt11/jvimext11.ico \
+		src/JvimExt11/jvimext11.rc \
+		src/JvimExt11/jvimext11_cfg.cpp \
+		src/JvimExt11/jvimext11_cfg.manifest \
+		src/JvimExt11/jvimext11_cfg.rc \
+		src/JvimExt11/jvimext11_ming.def \
+		src/JvimExt11/lang/en.rc \
+		src/JvimExt11/lang/fr.rc \
+		src/JvimExt11/resource.h \
+		src/JvimExt11/version.rc \
+		src/msix/AppxManifest.xml.in \
+		src/msix/Assets/JoliVIM150x150Logo.scale-100.png \
+		src/msix/Assets/JoliVIM150x150Logo.scale-200.png \
+		src/msix/Assets/JoliVIM44x44Logo.scale-100.png \
+		src/msix/Assets/JoliVIM44x44Logo.scale-200.png \
+		src/msix/Assets/JoliVIM44x44Logo.targetsize-16.png \
+		src/msix/Assets/JoliVIM44x44Logo.targetsize-16_altform-unplated.png \
+		src/msix/Assets/JoliVIM44x44Logo.targetsize-24.png \
+		src/msix/Assets/JoliVIM44x44Logo.targetsize-24_altform-unplated.png \
+		src/msix/Assets/JoliVIM44x44Logo.targetsize-256.png \
+		src/msix/Assets/JoliVIM44x44Logo.targetsize-256_altform-unplated.png \
+		src/msix/Assets/JoliVIM44x44Logo.targetsize-32.png \
+		src/msix/Assets/JoliVIM44x44Logo.targetsize-32_altform-unplated.png \
+		src/msix/Assets/JoliVIM44x44Logo.targetsize-48.png \
+		src/msix/Assets/JoliVIM44x44Logo.targetsize-48_altform-unplated.png \
+		src/msix/Assets/StoreLogo.scale-100.png \
+		src/msix/Assets/StoreLogo.scale-200.png \
+		src/msix/Strings/en-US/Resources.resw \
+		src/msix/Strings/fr/Resources.resw \
+		src/msix/make_msix.ps1 \
+		src/msix/test_msix.ps1 \
 		README_srcdos.txt \
 		src/INSTALLpc.txt \
 		src/Make_cyg.mak \
@@ -645,6 +687,11 @@ SRC_DOS =	\
 		src/gui_dwrite.h \
 		src/gui_w32.c \
 		src/gui_w32_rc.h \
+		src/gui_w32_winui.c \
+		src/gui_w32_winui.h \
+		src/gui_winui.cpp \
+		src/gui_winui.h \
+		src/winui_gen.ps1 \
 		src/if_ole.cpp \
 		src/if_ole.h \
 		src/if_ole.idl \
@@ -685,6 +732,7 @@ SRC_DOS_BIN =	\
 		src/tearoff.bmp \
 		src/tools.bmp \
 		src/vim*.ico \
+		src/joli.ico \
 		src/vim.tlb \
 		src/xpm/COPYRIGHT \
 		src/xpm/README.txt \
@@ -772,6 +820,7 @@ SRC_EXTRA =	\
 RT_ALL =	\
 		README.txt \
 		README.md \
+		README.VIM.md \
 		README_VIM9.md \
 		LICENSE \
 		CONTRIBUTING.md \
@@ -970,6 +1019,7 @@ RT_UNIX =	\
 RT_UNIX_DOS_BIN =	\
 		runtime/vim16x16.gif \
 		runtime/vim16x16.png \
+		runtime/joli.png \
 		runtime/vim16x16.xpm \
 		runtime/vim16x16_png.h \
 		runtime/vim32x32.gif \
@@ -1188,6 +1238,8 @@ LANG_GEN_BIN = \
 		runtime/spell/en.ascii.spl \
 		runtime/spell/en.latin1.spl \
 		runtime/spell/en.utf-8.spl \
+		runtime/spell/fr.utf-8.spl \
+		runtime/spell/fr.utf-8.sug \
 		runtime/spell/en.ascii.sug \
 		runtime/spell/en.latin1.sug \
 		runtime/spell/en.utf-8.sug \
