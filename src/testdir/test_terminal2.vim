@@ -692,11 +692,11 @@ func Test_term_gettitle()
 
   let term = term_start([GetVimProg(), '--clean', '-c', 'set noswapfile', '-c', 'set title'])
   call TermWait(term)
-  " When Vim is running as a server then the title ends in VIM{number}, thus
-  " optionally match a number after "VIM".
-  let title = s:TermPollAndAssertMatchTitle(term, '', '^\[No Name\] - VIM\d*$')
+  " The title ends in JoliVIM, or in VIM{number} when Vim is running as a
+  " server.
+  let title = s:TermPollAndAssertMatchTitle(term, '', '^\[No Name\] - \%(JoliVIM\|VIM\d*\)$')
   call term_sendkeys(term, ":e Xfoo\r")
-  let title = s:TermPollAndAssertMatchTitle(term, title, '^Xfoo (.*[/\\]testdir) - VIM\d*$')
+  let title = s:TermPollAndAssertMatchTitle(term, title, '^Xfoo (.*[/\\]testdir) - \%(JoliVIM\|VIM\d*\)$')
   call term_sendkeys(term, ":set titlestring=foo\r")
   let title = s:TermPollAndAssertMatchTitle(term, title, 'foo')
 

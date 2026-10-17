@@ -32,7 +32,7 @@ extern HWND s_textArea;
 extern HWND s_tabhwnd;
 extern WCHAR *convert_filterW(char_u *s);
 
-#if defined(FEAT_WINUI)
+# if defined(FEAT_WINUI)
 /*
  * Show the tabline popup menu with WinUI.  "pt" is the screen position.
  * Returns FALSE when WinUI can't be used (the Win32 menu is used then).
@@ -89,9 +89,9 @@ winui_tabline_popup(POINT pt)
     }
     return TRUE;
 }
-#endif
+# endif
 
-#if defined(FEAT_WINUI) && defined(MSWIN_FIND_REPLACE)
+# if defined(FEAT_WINUI) && defined(MSWIN_FIND_REPLACE)
 /*
  * Called by the WinUI find bar to run a find or replace, see WINUI_FIND_*.
  */
@@ -312,9 +312,9 @@ winui_show_findbar(char_u *arg, int replace)
     vim_free(text);
     return ret;
 }
-#endif
+# endif
 
-#ifdef FEAT_MENU
+# ifdef FEAT_MENU
 /*
  * Return the icon to use for "menu" in the WinUI popup menu.  The
  * untranslated name is used, so that it works for all languages.
@@ -482,9 +482,9 @@ winui_show_popupmenu(vimmenu_T *menu, int x, int y)
     return TRUE;
 }
 
-#endif // FEAT_MENU
+# endif // FEAT_MENU
 
-#if defined(FEAT_WINUI)
+# if defined(FEAT_WINUI)
 /*
  * Modern Open/Save file dialog using IFileDialog (the Windows Explorer-style
  * dialog).  Sets "*ok" to FALSE when the dialog can't be created (the caller
@@ -626,9 +626,9 @@ done:
     (void)SetFocus(s_hwnd);
     return result;
 }
-#endif
+# endif
 
-#if defined(FEAT_WINUI)
+# if defined(FEAT_WINUI)
 /*
  * Show a modal dialog with a WinUI ContentDialog.  Handles any number of
  * buttons and an optional input field ("textfield").  Returns the 1-based
@@ -717,7 +717,7 @@ winui_dialog(
     vim_free(wfield);
     return ret;
 }
-#endif
+# endif
 
 // Callback for do_in_runtimepath(): keep the first match in the buffer.
     static void

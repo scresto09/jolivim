@@ -65,6 +65,7 @@ int WinUI_PreTranslateMessage(MSG *msg);
 int WinUI_TitleBarInit(HWND hwnd, int *height, int *left, int *right);
 void WinUI_TitleBarGetMetrics(int *height, int *left, int *right);
 void WinUI_TitleBarSetDrag(const int *rects, int count);
+void WinUI_SetForceDark(int force);
 void WinUI_UpdateTheme(void);
 
 int WinUI_TabBarInit(HWND hwnd, const WCHAR *icon_path);
@@ -117,6 +118,9 @@ typedef struct
 // Returns 1 when the user accepted (io updated), 0 when cancelled, -1 when the
 // WinUI runtime is not available (caller should fall back to ChooseFontW).
 int WinUI_ShowFontDialog(HWND hwnd, WinUIFontChoice *io);
+
+// TRUE while one of the dialogs above is shown.
+int WinUI_DialogActive(void);
 
 // Find/replace bar actions.
 #define WINUI_FIND_NEXT		1

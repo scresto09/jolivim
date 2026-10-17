@@ -1463,7 +1463,7 @@ mch_print_init(prt_settings_T *psettings, char_u *jobname, int forceit)
     }
     else
     {
-#if defined(FEAT_WINUI)
+# if defined(FEAT_WINUI)
 	// Use the more modern PrintDlgEx (XP-style printer list).  It needs a
 	// COM-initialized thread (WinUI already did that) and does not support
 	// PD_RETURNDEFAULT, so it is only used for the interactive case; fall
@@ -1502,7 +1502,7 @@ mch_print_init(prt_settings_T *psettings, char_u *jobname, int forceit)
 	    prt_dlg.nCopies = (WORD)pdx.nCopies;
 	}
 	else		// PrintDlgEx unavailable: classic dialog.
-#endif
+# endif
 	{
 	    if (PrintDlgW(&prt_dlg) == 0)
 		goto init_fail_dlg;

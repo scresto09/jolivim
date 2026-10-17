@@ -603,8 +603,12 @@ winrt::hstring s_tabmenu_copy;
 winrt::hstring s_tabmenu_moveleft;
 winrt::hstring s_tabmenu_moveright;
 
+// 'd' in 'guioptions' forces the dark theme, see WinUI_SetForceDark().
+static bool s_force_dark = false;
+
 /*
- * TRUE when Windows apps are set to the dark theme.
+ * TRUE when the dark theme is used: always when forced with 'd' in
+ * 'guioptions', otherwise when Windows apps are set to the dark theme.
  */
     static bool
 winui_system_is_dark(void)
@@ -612,6 +616,8 @@ winui_system_is_dark(void)
     DWORD   val = 1;		// default: light
     DWORD   sz = sizeof(val);
 
+    if (s_force_dark)
+        return true;
     if (RegGetValueW(HKEY_CURRENT_USER,
             L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
             L"AppsUseLightTheme", RRF_RT_REG_DWORD, NULL, &val, &sz)
@@ -723,6 +729,11 @@ WinUI_ShowPopupMenu(HWND hwnd, const WinUIMenuItem *items, int count,
         // The island is only one pixel, the menu must be able to go outside.
         flyout.ShouldConstrainToRootBounds(false);
         fill_flyout(flyout, items, count, session);
+        // The menu takes the theme of the root it is shown on: follow the
+        // current one ('d' in 'guioptions' or the Windows theme), otherwise
+        // it keeps the theme the Application had at startup.
+        s_root.RequestedTheme(winui_system_is_dark()
+                ? mux::ElementTheme::Dark : mux::ElementTheme::Light);
         flyout.Opened([session](wf::IInspectable const &,
                                 wf::IInspectable const &)
         {
@@ -1274,6 +1285,22 @@ update_suggestions(muxc::AutoSuggestBox const &box)
     }
 }
 
+// Theme and card colors, following the light/dark setting.  Done each time
+// the bar is shown, since it is built only once.
+    void
+apply_findbar_theme(void)
+{
+    bool dark = winui_system_is_dark();
+    s_findbar_root.RequestedTheme(dark ? mux::ElementTheme::Dark
+                                       : mux::ElementTheme::Light);
+    winrt::Windows::UI::Color cc = dark
+            ? winrt::Windows::UI::Color{255, 0x2D, 0x2D, 0x2D}
+            : winrt::Windows::UI::Color{255, 0xFF, 0xFF, 0xFF};
+    s_findbar_card.Background(mux::Media::SolidColorBrush(cc));
+    s_findbar_card.BorderBrush(mux::Media::SolidColorBrush(
+            winrt::Windows::UI::ColorHelper::FromArgb(40, 128, 128, 128)));
+}
+
 // Build the bar once.
     bool
 build_findbar(HWND hwnd, const WinUIFindLabels *lab)
@@ -1490,18 +1517,7 @@ build_findbar(HWND hwnd, const WinUIFindLabels *lab)
                         }
                     })), true);
 
-        // Theme and card colors, following the system light/dark setting.
-        {
-            bool dark = winui_system_is_dark();
-            s_findbar_root.RequestedTheme(dark ? mux::ElementTheme::Dark
-                                               : mux::ElementTheme::Light);
-            winrt::Windows::UI::Color cc = dark
-                    ? winrt::Windows::UI::Color{255, 0x2D, 0x2D, 0x2D}
-                    : winrt::Windows::UI::Color{255, 0xFF, 0xFF, 0xFF};
-            s_findbar_card.Background(mux::Media::SolidColorBrush(cc));
-            s_findbar_card.BorderBrush(mux::Media::SolidColorBrush(
-                    winrt::Windows::UI::ColorHelper::FromArgb(40, 128, 128, 128)));
-        }
+        apply_findbar_theme();
 
         s_findbar_source.Content(s_findbar_root);
         s_findbar_hwnd = winrt::Microsoft::UI::GetWindowFromWindowId(
@@ -1540,6 +1556,7 @@ WinUI_ShowFindBar(HWND hwnd, const WCHAR *text, int replace,
         return FALSE;
     try
     {
+        apply_findbar_theme();
         s_find_box.Text(text != NULL ? text : L"");
         if (s_match_case)
             s_match_case.IsChecked(match_case != 0);
@@ -1717,7 +1734,90 @@ pump_until(Pred pred, DWORD timeout_ms)
     return true;
 }
 
+// Set by the dialog being shown to re-apply its theme, so that a Windows
+// theme change is applied to it at once (see WinUI_UpdateTheme()).
+std::function<void(bool)> s_dialog_retheme;
+
+// Theme of a dialog: the dialog itself, its content, the shared root and the
+// footer background.
+    void
+theme_dialog(muxc::ContentDialog const &dlg, mux::FrameworkElement const &outer,
+        muxc::Border const &footer, bool dark)
+{
+    auto theme = dark ? mux::ElementTheme::Dark : mux::ElementTheme::Light;
+
+    outer.RequestedTheme(theme);
+    dlg.RequestedTheme(theme);
+    s_dialog_root.RequestedTheme(theme);
+    footer.Background(mux::Media::SolidColorBrush(dark
+            ? winrt::Windows::UI::ColorHelper::FromArgb(255, 32, 32, 32)
+            : winrt::Windows::UI::ColorHelper::FromArgb(255, 243, 243, 243)));
+}
+
+// While a dialog is shown the main window can't be resized, maximized,
+// minimized or closed, like the owner of a modal dialog in a WinUI app.  The
+// previous presenter state is restored when the lock goes out of scope.
+bool s_dialog_lock = false;
+
+struct MainWindowLock
+{
+    muw::OverlappedPresenter presenter{nullptr};
+    bool resizable = true;
+    bool maximizable = true;
+    bool minimizable = true;
+
+    MainWindowLock()
+    {
+        s_dialog_lock = true;
+        try
+        {
+            if (s_appwindow)
+                presenter = s_appwindow.Presenter()
+                                        .try_as<muw::OverlappedPresenter>();
+            if (presenter)
+            {
+                resizable = presenter.IsResizable();
+                maximizable = presenter.IsMaximizable();
+                minimizable = presenter.IsMinimizable();
+                presenter.IsResizable(false);
+                presenter.IsMaximizable(false);
+                presenter.IsMinimizable(false);
+            }
+        }
+        catch (...)
+        {
+            presenter = nullptr;
+        }
+    }
+
+    ~MainWindowLock()
+    {
+        try
+        {
+            if (presenter)
+            {
+                presenter.IsResizable(resizable);
+                presenter.IsMaximizable(maximizable);
+                presenter.IsMinimizable(minimizable);
+            }
+        }
+        catch (...) {}
+        s_dialog_retheme = nullptr;
+        s_dialog_lock = false;
+    }
+};
+
 } // namespace
+
+/*
+ * TRUE while a modal dialog is shown: the main window must not be resized
+ * or closed.
+ */
+    int
+WinUI_DialogActive(void)
+{
+    return s_dialog_lock;
+}
 
 /*
  * Show a modal dialog with "message", up to "nbuttons" buttons (any number),
@@ -1739,6 +1839,7 @@ WinUI_ShowDialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
     int     result = -1;
 
     s_in_popup = true;
+    MainWindowLock lock;
     try
     {
         if (!s_dialog_source)
@@ -1759,6 +1860,10 @@ WinUI_ShowDialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
                         rc.right > 0 ? rc.right : 1,
                         rc.bottom > 0 ? rc.bottom : 1});
         s_dialog_source.SiteBridge().Show();
+        // Above the other children (tab strip, menu bar, toolbar, find bar),
+        // so that they can't be clicked while the dialog is shown.
+        SetWindowPos(s_dialog_hwnd, HWND_TOP, 0, 0, 0, 0,
+                                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         SetFocus(s_dialog_hwnd);
 
         muxc::ContentDialog dlg;
@@ -1889,6 +1994,16 @@ WinUI_ShowDialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
         catch (...)
         {
         }
+        // Theme the dialog itself and the shared root too: their background
+        // otherwise keeps the theme the Application had at startup.
+        dlg.RequestedTheme(dark ? mux::ElementTheme::Dark
+                                : mux::ElementTheme::Light);
+        s_dialog_root.RequestedTheme(dark ? mux::ElementTheme::Dark
+                                          : mux::ElementTheme::Light);
+        s_dialog_retheme = [dlg, outer, footer](bool d)
+        {
+            theme_dialog(dlg, outer, footer, d);
+        };
         dlg.Content(outer);
         dlg.Opened([default_btn](muxc::ContentDialog const &,
                             muxc::ContentDialogOpenedEventArgs const &)
@@ -2013,6 +2128,7 @@ WinUI_ShowAbout(HWND hwnd, const WCHAR *image_path, const WCHAR *title,
     int     ok = FALSE;
 
     s_in_popup = true;
+    MainWindowLock lock;
     try
     {
         if (!s_dialog_source)
@@ -2032,6 +2148,10 @@ WinUI_ShowAbout(HWND hwnd, const WCHAR *image_path, const WCHAR *title,
                         rc.right > 0 ? rc.right : 1,
                         rc.bottom > 0 ? rc.bottom : 1});
         s_dialog_source.SiteBridge().Show();
+        // Above the other children (tab strip, menu bar, toolbar, find bar),
+        // so that they can't be clicked while the dialog is shown.
+        SetWindowPos(s_dialog_hwnd, HWND_TOP, 0, 0, 0, 0,
+                                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         SetFocus(s_dialog_hwnd);
 
         bool dark = winui_system_is_dark();
@@ -2190,6 +2310,24 @@ WinUI_ShowAbout(HWND hwnd, const WCHAR *image_path, const WCHAR *title,
                                 winrt::box_value(0.0));
         }
         catch (...) {}
+        // Theme the dialog itself and the shared root too: their background
+        // otherwise keeps the theme the Application had at startup.
+        dlg.RequestedTheme(dark ? mux::ElementTheme::Dark
+                                : mux::ElementTheme::Light);
+        s_dialog_root.RequestedTheme(dark ? mux::ElementTheme::Dark
+                                          : mux::ElementTheme::Light);
+        s_dialog_retheme = [dlg, outer, footer, ink, grey](bool d)
+        {
+            theme_dialog(dlg, outer, footer, d);
+            ink.Color(d ? winrt::Windows::UI::ColorHelper::FromArgb(
+                                                        255, 234, 239, 236)
+                        : winrt::Windows::UI::ColorHelper::FromArgb(
+                                                        255, 31, 42, 37));
+            grey.Color(d ? winrt::Windows::UI::ColorHelper::FromArgb(
+                                                        255, 169, 180, 175)
+                         : winrt::Windows::UI::ColorHelper::FromArgb(
+                                                        255, 91, 107, 99));
+        };
         dlg.Content(outer);
         outer.KeyDown([state, weak](wf::IInspectable const &,
                         mux::Input::KeyRoutedEventArgs const &e)
@@ -2263,6 +2401,7 @@ WinUI_ShowFontDialog(HWND hwnd, WinUIFontChoice *io)
     int     rc = -1;
 
     s_in_popup = true;
+    MainWindowLock lock;
     try
     {
         if (!s_dialog_source)
@@ -2281,6 +2420,10 @@ WinUI_ShowFontDialog(HWND hwnd, WinUIFontChoice *io)
                 winrt::Windows::Graphics::RectInt32{0, 0,
                         r.right > 0 ? r.right : 1, r.bottom > 0 ? r.bottom : 1});
         s_dialog_source.SiteBridge().Show();
+        // Above the other children (tab strip, menu bar, toolbar, find bar),
+        // so that they can't be clicked while the dialog is shown.
+        SetWindowPos(s_dialog_hwnd, HWND_TOP, 0, 0, 0, 0,
+                                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         SetFocus(s_dialog_hwnd);
 
         bool dark = winui_system_is_dark();
@@ -2289,22 +2432,45 @@ WinUI_ShowFontDialog(HWND hwnd, WinUIFontChoice *io)
 
         // Font family list.
         muxc::ListView list;
-        list.Height(240);
+        // No fixed height: the list takes the room the preview leaves in the
+        // fixed-height dialog (see "outer" below).
+        list.MinHeight(100);
         list.SelectionMode(muxc::ListViewSelectionMode::Single);
+        // Like the GTK font chooser: each family is listed four times, as
+        // normal, bold, italic and bold italic, each entry rendered in its own
+        // font and style.  Entry "n" is family n / 4 with style n % 4, where
+        // bit 1 is bold and bit 2 is italic (GDI synthesizes missing styles).
+        winrt::hstring boldname(io->style_bold != NULL ? io->style_bold
+                                                                : L"Bold");
+        winrt::hstring italicname(io->style_italic != NULL ? io->style_italic
+                                                                : L"Italic");
         int selidx = 0;
         for (int i = 0; i < io->family_count; ++i)
         {
-            // Show each family name rendered in its own font (modern pickers).
             winrt::hstring fam(io->families[i]);
-            muxc::TextBlock item;
-            item.Text(fam);
-            try { item.FontFamily(mux::Media::FontFamily(fam)); }
-            catch (...) {}
-            item.FontSize(16);
-            list.Items().Append(item);
+            for (int st = 0; st < 4; ++st)
+            {
+                winrt::hstring label = fam;
+                if (st & 1)
+                    label = label + L" " + boldname;
+                if (st & 2)
+                    label = label + L" " + italicname;
+                muxc::TextBlock item;
+                item.Text(label);
+                try { item.FontFamily(mux::Media::FontFamily(fam)); }
+                catch (...) {}
+                item.FontSize(16);
+                item.FontWeight((st & 1)
+                        ? winrt::Windows::UI::Text::FontWeights::Bold()
+                        : winrt::Windows::UI::Text::FontWeights::Normal());
+                item.FontStyle((st & 2)
+                        ? winrt::Windows::UI::Text::FontStyle::Italic
+                        : winrt::Windows::UI::Text::FontStyle::Normal);
+                list.Items().Append(item);
+            }
             if (io->family[0] != L'\0'
                     && wcscmp(io->families[i], io->family) == 0)
-                selidx = i;
+                selidx = i * 4 + (io->bold ? 1 : 0) + (io->italic ? 2 : 0);
         }
         if (io->family_count > 0)
         {
@@ -2334,28 +2500,29 @@ WinUI_ShowFontDialog(HWND hwnd, WinUIFontChoice *io)
                 sizeBox.Text(winrt::to_hstring(cur));
         }
 
-        // No Bold/Italic boxes: like the GTK font chooser, each family is shown
-        // in its own style and the weight/italic of the current font are kept as
-        // is (change them with syntax highlighting or ":set guifont").  The
-        // preview reflects the current style.
+        // The preview shows the selected family and style.
         muxc::TextBlock preview;
         preview.Text(io->preview_text != NULL ? io->preview_text
                             : L"The quick brown fox jumps over the lazy dog");
-        preview.TextWrapping(mux::TextWrapping::Wrap);
-        preview.FontWeight(io->bold
-                ? winrt::Windows::UI::Text::FontWeights::Bold()
-                : winrt::Windows::UI::Text::FontWeights::Normal());
-        preview.FontStyle(io->italic
-                ? winrt::Windows::UI::Text::FontStyle::Italic
-                : winrt::Windows::UI::Text::FontStyle::Normal);
+        // No wrapping: a preview wider than the dialog is just cut off.
+        preview.TextWrapping(mux::TextWrapping::NoWrap);
 
-        auto refresh = [list, sizeBox, preview]()
+        auto refresh = [list, sizeBox, preview, io]()
         {
             try
             {
-                auto sel = list.SelectedItem();
-                if (auto tb = sel.try_as<muxc::TextBlock>())
-                    preview.FontFamily(mux::Media::FontFamily(tb.Text()));
+                int idx = list.SelectedIndex();
+                if (idx >= 0 && idx / 4 < io->family_count)
+                {
+                    preview.FontFamily(mux::Media::FontFamily(
+                                        winrt::hstring(io->families[idx / 4])));
+                    preview.FontWeight((idx & 1)
+                            ? winrt::Windows::UI::Text::FontWeights::Bold()
+                            : winrt::Windows::UI::Text::FontWeights::Normal());
+                    preview.FontStyle((idx & 2)
+                            ? winrt::Windows::UI::Text::FontStyle::Italic
+                            : winrt::Windows::UI::Text::FontStyle::Normal);
+                }
                 int sz = (int)wcstol(sizeBox.Text().c_str(), NULL, 10);
                 if (sz < 6)
                     sz = 11;
@@ -2374,17 +2541,29 @@ WinUI_ShowFontDialog(HWND hwnd, WinUIFontChoice *io)
         sizeBox.TextSubmitted([refresh](muxc::ComboBox const &,
                     muxc::ComboBoxTextSubmittedEventArgs const &) { refresh(); });
 
-        auto content = muxc::StackPanel();
-        content.Spacing(12);
+        // Rows: title, font list, size, preview.  The list row is the only
+        // star-sized one, so it shrinks when the preview grows.
+        auto content = muxc::Grid();
+        content.RowSpacing(12);
         content.Padding(mux::Thickness{24, 20, 24, 16});
+        for (int k = 0; k < 4; ++k)
+        {
+            auto rd = muxc::RowDefinition();
+            rd.Height(k == 1 ? mux::GridLengthHelper::FromValueAndType(
+                                            1, mux::GridUnitType::Star)
+                             : mux::GridLengthHelper::Auto());
+            content.RowDefinitions().Append(rd);
+        }
         if (io->title != NULL && *io->title != L'\0')
         {
             muxc::TextBlock t;
             t.Text(io->title);
             t.FontSize(20);
             t.FontWeight(winrt::Windows::UI::Text::FontWeights::SemiBold());
+            muxc::Grid::SetRow(t, 0);
             content.Children().Append(t);
         }
+        muxc::Grid::SetRow(list, 1);
         content.Children().Append(list);
 
         auto row = muxc::StackPanel();
@@ -2401,6 +2580,7 @@ WinUI_ShowFontDialog(HWND hwnd, WinUIFontChoice *io)
             sizecol.Children().Append(sizeBox);
             row.Children().Append(sizecol);
         }
+        muxc::Grid::SetRow(row, 2);
         content.Children().Append(row);
 
         auto card = muxc::Border();
@@ -2410,6 +2590,7 @@ WinUI_ShowFontDialog(HWND hwnd, WinUIFontChoice *io)
         card.BorderBrush(mux::Media::SolidColorBrush(
                 winrt::Windows::UI::ColorHelper::FromArgb(40, 128, 128, 128)));
         card.Child(preview);
+        muxc::Grid::SetRow(card, 3);
         content.Children().Append(card);
 
         auto state = std::make_shared<DialogState>();
@@ -2436,17 +2617,18 @@ WinUI_ShowFontDialog(HWND hwnd, WinUIFontChoice *io)
         {
             try
             {
-                auto sel = list.SelectedItem();
-                if (auto tb = sel.try_as<muxc::TextBlock>())
+                int idx = list.SelectedIndex();
+                if (idx >= 0 && idx / 4 < io->family_count)
                 {
-                    auto fam = tb.Text();
-                    wcsncpy(io->family, fam.c_str(), LF_FACESIZE - 1);
+                    wcsncpy(io->family, io->families[idx / 4],
+                                                        LF_FACESIZE - 1);
                     io->family[LF_FACESIZE - 1] = L'\0';
+                    io->bold = (idx & 1) ? 1 : 0;
+                    io->italic = (idx & 2) ? 1 : 0;
                 }
                 int sz = (int)wcstol(sizeBox.Text().c_str(), NULL, 10);
                 if (sz >= 6 && sz <= 72)
                     io->size = sz;
-                // io->bold / io->italic are left as they were: no style boxes.
             }
             catch (...) {}
             state->result = 1;
@@ -2485,7 +2667,8 @@ WinUI_ShowFontDialog(HWND hwnd, WinUIFontChoice *io)
         auto outer = muxc::Grid();
         {
             auto r0 = muxc::RowDefinition();
-            r0.Height(mux::GridLengthHelper::Auto());
+            r0.Height(mux::GridLengthHelper::FromValueAndType(
+                                            1, mux::GridUnitType::Star));
             auto r1 = muxc::RowDefinition();
             r1.Height(mux::GridLengthHelper::Auto());
             outer.RowDefinitions().Append(r0);
@@ -2495,6 +2678,12 @@ WinUI_ShowFontDialog(HWND hwnd, WinUIFontChoice *io)
         muxc::Grid::SetRow(footer, 1);
         outer.Children().Append(content);
         outer.Children().Append(footer);
+        // Fixed size (below the default ContentDialogMaxWidth of 548 and
+        // ContentDialogMaxHeight of 756), so the dialog does not resize with
+        // the font names or the preview size.  The height is reduced below
+        // when the window is too small to show it entirely.
+        outer.Width(500);
+        outer.Height(560);
         outer.RequestedTheme(dark ? mux::ElementTheme::Dark
                                   : mux::ElementTheme::Light);
 
@@ -2506,6 +2695,16 @@ WinUI_ShowFontDialog(HWND hwnd, WinUIFontChoice *io)
                                 winrt::box_value(0.0));
         }
         catch (...) {}
+        // Theme the dialog itself and the shared root too: their background
+        // otherwise keeps the theme the Application had at startup.
+        dlg.RequestedTheme(dark ? mux::ElementTheme::Dark
+                                : mux::ElementTheme::Light);
+        s_dialog_root.RequestedTheme(dark ? mux::ElementTheme::Dark
+                                          : mux::ElementTheme::Light);
+        s_dialog_retheme = [dlg, outer, footer](bool d)
+        {
+            theme_dialog(dlg, outer, footer, d);
+        };
         dlg.Content(outer);
         outer.KeyDown([state, weak](wf::IInspectable const &,
                         mux::Input::KeyRoutedEventArgs const &e)
@@ -2524,6 +2723,19 @@ WinUI_ShowFontDialog(HWND hwnd, WinUIFontChoice *io)
                                                                     3000))
             throw winrt::hresult_error(E_FAIL, L"no XamlRoot");
         dlg.XamlRoot(s_dialog_root.XamlRoot());
+
+        // Fit in the window (the island covers its client area, "r" is in
+        // device pixels): keep a margin above and below the dialog.  The
+        // window can't be resized while the dialog is shown, so this is only
+        // done once.  The font list is the part that shrinks.
+        {
+            double scale = s_dialog_root.XamlRoot().RasterizationScale();
+            if (scale <= 0.0)
+                scale = 1.0;
+            double avail = (double)r.bottom / scale - 2 * 24;
+            if (avail < 560.0)
+                outer.Height(avail > 300.0 ? avail : 300.0);
+        }
 
         auto op = dlg.ShowAsync();
         op.Completed([state](wf::IAsyncOperation<muxc::ContentDialogResult>
@@ -2658,6 +2870,12 @@ winui_apply_colors(bool dark)
  * items are flagged for recreation so they pick up the new brushes.
  */
     void
+WinUI_SetForceDark(int force)
+{
+    s_force_dark = force != 0;
+}
+
+    void
 WinUI_UpdateTheme(void)
 {
     try
@@ -2665,6 +2883,10 @@ WinUI_UpdateTheme(void)
         winui_apply_colors(winui_system_is_dark());
         if (s_menubar_root)
             set_menubar_colors();
+        if (s_findbar_card)
+            apply_findbar_theme();
+        if (s_dialog_retheme)
+            s_dialog_retheme(winui_system_is_dark());
         s_tab_force_rebuild = true;
     }
     catch (...)

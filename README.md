@@ -34,8 +34,10 @@ All of this is Windows-only and enabled through the `FEAT_WINUI` build flag:
   Vim, guard it so Vim doesn't error: `if has('winui') | set tbst=win11 | endif`.
 - **Find/replace bar** floating over the text, with search history.
 - **Light / dark theme that follows the Windows setting** (title bar, tabs,
-  menu, toolbar, dialogs), switching live.
+  menu, toolbar, scroll bars, dialogs), switching live.
 - **"Copy file name"** from the status-line right-click menu.
+- **The GUI binary is renamed `jvim.exe`** (`jvimd.exe` for a debug build),
+  instead of `gvim.exe`.
 
 Everything gracefully **falls back to the classic Win32 UI** when the WinUI
 runtime is not available.

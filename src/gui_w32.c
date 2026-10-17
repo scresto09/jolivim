@@ -64,9 +64,11 @@ static int s_titlebar_right = 0;	    // right caption inset (device px)
 static int s_tabview_active = FALSE;	    // TabView in the title bar
 static int winui_titlebar_offset(void);
 static void winui_titlebar_layout(void);
+static int s_winui_force_dark = FALSE;	    // 'd' in 'guioptions'
 
 /*
- * TRUE when Windows apps are set to the dark theme.
+ * TRUE when the WinUI GUI uses the dark theme: always when forced with the
+ * 'd' flag in 'guioptions', otherwise when Windows apps use the dark theme.
  */
     static int
 winui_is_dark_mode(void)
@@ -74,6 +76,8 @@ winui_is_dark_mode(void)
     DWORD   val = 1;		// default: light
     DWORD   sz = sizeof(val);
 
+    if (s_winui_force_dark)
+	return TRUE;
     if (RegGetValueW(HKEY_CURRENT_USER,
 	    L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
 	    L"AppsUseLightTheme", RRF_RT_REG_DWORD, NULL, &val, &sz)
@@ -494,6 +498,9 @@ static int fullscreen_on = FALSE;
 static HINSTANCE hUxThemeLib = NULL;
 static DWORD (WINAPI *pSetPreferredAppMode)(DWORD) = NULL;
 static void (WINAPI *pFlushMenuThemes)(void) = NULL;
+# ifdef FEAT_WINUI
+static HRESULT (WINAPI *pSetWindowTheme)(HWND, LPCWSTR, LPCWSTR) = NULL;
+# endif
 static void dyn_uxtheme_load(void);
 #endif
 
@@ -1877,6 +1884,44 @@ gui_mch_set_text_area_pos(int x, int y, int w, int h)
  * Scrollbar stuff:
  */
 
+#if defined(FEAT_GUI_DARKTHEME) && defined(FEAT_WINUI)
+// Current dark/light state, so scroll bars can follow the color scheme.
+static int s_dark_theme = FALSE;
+
+// Apply the dark or light Explorer theme to one native scroll bar so it
+// follows the color scheme (JoliVIM), then repaint it.  Only with the WinUI
+// title bar, the classic GUI keeps the default scroll bars.
+    static void
+theme_scrollbar(HWND hwnd)
+{
+    int	    want;
+
+    if (!s_titlebar_active || pSetWindowTheme == NULL || hwnd == NULL)
+	return;
+    // Only (re)apply when the mode actually changed, to avoid flicker: the
+    // last applied state is kept in a window property (1 = light, 2 = dark).
+    want = s_dark_theme ? 2 : 1;
+    if ((int)(INT_PTR)GetPropW(hwnd, L"VimSbTheme") == want)
+	return;
+    pSetWindowTheme(hwnd, s_dark_theme ? L"DarkMode_Explorer" : L"Explorer",
+								    NULL);
+    SetPropW(hwnd, L"VimSbTheme", (HANDLE)(INT_PTR)want);
+    InvalidateRect(hwnd, NULL, TRUE);
+}
+
+// Re-theme every scroll bar child of the main window (used on theme change).
+    static BOOL CALLBACK
+theme_scrollbar_cb(HWND hwnd, LPARAM lparam UNUSED)
+{
+    WCHAR   cls[16];
+
+    if (GetClassNameW(hwnd, cls, (int)ARRAY_LENGTH(cls)) > 0
+	    && _wcsicmp(cls, L"ScrollBar") == 0)
+	theme_scrollbar(hwnd);
+    return TRUE;
+}
+#endif
+
     void
 gui_mch_enable_scrollbar(
     scrollbar_T     *sb,
@@ -1905,6 +1950,11 @@ gui_mch_set_scrollbar_pos(
 #endif
     SetWindowPos(sb->id, NULL, x, y, w, h,
 			      SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+#if defined(FEAT_GUI_DARKTHEME) && defined(FEAT_WINUI)
+    // Apply the current theme now that the scroll bar is shown; doing it at
+    // creation, while the control is still hidden, does not stick.
+    theme_scrollbar(sb->id);
+#endif
 }
 
     int
@@ -3211,7 +3261,7 @@ show_tabline_popup_menu(void)
     if (hold_gui_events || cmdwin_type != 0)
 	return;
 
-#if defined(FEAT_WINUI)
+# if defined(FEAT_WINUI)
     {
 	POINT	cpt;
 
@@ -3219,7 +3269,7 @@ show_tabline_popup_menu(void)
 	if (winui_tabline_popup(cpt))
 	    return;
     }
-#endif
+# endif
 
     tab_pmenu = CreatePopupMenu();
     if (tab_pmenu == NULL)
@@ -3266,7 +3316,7 @@ show_tabline_popup_menu(void)
     void
 gui_mch_show_tabline(int showit)
 {
-#if defined(FEAT_WINUI)
+# if defined(FEAT_WINUI)
     if (s_tabview_active)
     {
 	if (s_tabhwnd != NULL)
@@ -3275,7 +3325,7 @@ gui_mch_show_tabline(int showit)
 	showing_tabline = showit;
 	return;
     }
-#endif
+# endif
     if (s_tabhwnd == NULL)
 	return;
 
@@ -3311,7 +3361,7 @@ gui_mch_update_tabline(void)
     int		tabadded = 0;
     WCHAR	*wstr = NULL;
 
-#if defined(FEAT_WINUI)
+# if defined(FEAT_WINUI)
     if (s_tabview_active)
     {
 	int	n = 0;
@@ -3341,7 +3391,7 @@ gui_mch_update_tabline(void)
 	    ShowWindow(s_tabhwnd, SW_HIDE);
 	return;
     }
-#endif
+# endif
 
     if (s_tabhwnd == NULL)
 	return;
@@ -3407,13 +3457,13 @@ gui_mch_update_tabline(void)
     void
 gui_mch_set_curtab(int nr)
 {
-#if defined(FEAT_WINUI)
+# if defined(FEAT_WINUI)
     if (s_tabview_active)
     {
 	WinUI_TabBarSetSelected(nr - 1);
 	return;
     }
-#endif
+# endif
     if (s_tabhwnd == NULL)
 	return;
 
@@ -3424,18 +3474,80 @@ gui_mch_set_curtab(int nr)
 #endif
 
 #ifdef FEAT_GUI_DARKTHEME
-    void
-gui_mch_set_dark_theme(int dark)
+/*
+ * Apply the dark or light theme to the window frame, menus and scroll bars.
+ */
+    static void
+apply_dark_theme(int dark)
 {
+    DWORD   mode = dark ? 1 : 0;    // AllowDark : Default
+
     if (pDwmSetWindowAttribute != NULL && win_version >= MAKE_VER(10, 0, 18985))
 	pDwmSetWindowAttribute(s_hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, &dark,
 		sizeof(dark));
 
+# if defined(FEAT_WINUI)
+    // AllowDark only gives dark menus when Windows is dark; ForceDark is
+    // needed when the dark theme is forced with 'd' in 'guioptions'.
+    if (s_titlebar_active && s_winui_force_dark)
+	mode = 2;		    // ForceDark
+# endif
     if (pSetPreferredAppMode != NULL && win_version >= MAKE_VER(10, 0, 18362))
-	pSetPreferredAppMode(dark);
+	pSetPreferredAppMode(mode);
 
     if (pFlushMenuThemes != NULL && win_version >= MAKE_VER(10, 0, 18362))
 	pFlushMenuThemes();
+
+# if defined(FEAT_WINUI)
+    // Make the scroll bars follow the theme too (light/dark).
+    s_dark_theme = dark;
+    EnumChildWindows(s_hwnd, theme_scrollbar_cb, 0);
+# endif
+}
+
+# if defined(FEAT_WINUI)
+/*
+ * Re-apply the WinUI theme (dark when forced with 'd' in 'guioptions',
+ * otherwise the Windows theme) to the frame, menus, scroll bars, title bar,
+ * tabs and toolbar.
+ */
+    static void
+winui_update_theme(void)
+{
+    // Window frame and menus first, then re-apply our caption-button/
+    // tab colours so they win over the frame re-theming.
+    apply_dark_theme(winui_is_dark_mode());
+    SetWindowPos(s_hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE
+			    | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    WinUI_UpdateTheme();
+    gui_mch_update_tabline();
+#  ifdef FEAT_TOOLBAR
+    // Re-render the toolbar glyphs in the new colour and repaint the
+    // (custom-drawn) toolbar background.
+    if (s_toolbarhwnd != NULL && create_toolbar_glyph_imagelists())
+    {
+	set_toolbar_imagelists();
+	InvalidateRect(s_toolbarhwnd, NULL, TRUE);
+    }
+#  endif
+}
+# endif
+
+    void
+gui_mch_set_dark_theme(int dark)
+{
+# if defined(FEAT_WINUI)
+    if (s_titlebar_active)
+    {
+	// 'd' in 'guioptions' forces the dark theme for the whole WinUI GUI,
+	// without it the GUI follows the Windows theme.
+	s_winui_force_dark = dark;
+	WinUI_SetForceDark(dark);
+	winui_update_theme();
+	return;
+    }
+# endif
+    apply_dark_theme(dark);
 }
 
     static void
@@ -3449,11 +3561,19 @@ dyn_uxtheme_load(void)
 	GetProcAddress(hUxThemeLib, MAKEINTRESOURCE(135));
     pFlushMenuThemes = (void (WINAPI *)(void))
 	GetProcAddress(hUxThemeLib, MAKEINTRESOURCE(136));
+# ifdef FEAT_WINUI
+    // Documented export, used to theme the scroll bars; not fatal if absent.
+    pSetWindowTheme = (HRESULT (WINAPI *)(HWND, LPCWSTR, LPCWSTR))
+	GetProcAddress(hUxThemeLib, "SetWindowTheme");
+# endif
 
     if (pSetPreferredAppMode == NULL || pFlushMenuThemes == NULL)
     {
 	FreeLibrary(hUxThemeLib);
 	hUxThemeLib = NULL;
+# ifdef FEAT_WINUI
+	pSetWindowTheme = NULL;
+# endif
 	return;
     }
 }
@@ -3749,7 +3869,7 @@ winui_menubar_layout(int resize)
 }
 # endif
 
-#if defined(FEAT_WINUI)
+# if defined(FEAT_WINUI)
 /*
  * do_in_runtimepath() callback: keep the first match in the buffer.
  */
@@ -4026,7 +4146,7 @@ gui_winui_show_sysmenu(void)
 {
     SendMessage(s_hwnd, WM_SYSCOMMAND, SC_KEYMENU, (LPARAM)' ');
 }
-#endif
+# endif
 
     static void
 gui_mch_show_popupmenu_at(vimmenu_T *menu, int x, int y)
@@ -4182,6 +4302,9 @@ _OnActivateApp(
     void
 gui_mch_destroy_scrollbar(scrollbar_T *sb)
 {
+#if defined(FEAT_GUI_DARKTHEME) && defined(FEAT_WINUI)
+    RemovePropW(sb->id, L"VimSbTheme");
+#endif
     DestroyWindow(sb->id);
 }
 
@@ -4897,7 +5020,7 @@ gui_mch_browse(
     char_u		*p, *q;
     BOOL		ret;
 
-#if defined(FEAT_WINUI)
+# if defined(FEAT_WINUI)
     {
 	int	ok = FALSE;
 	char_u	*r = winui_browse(saving, title, dflt, ext, initdir, filter,
@@ -4905,7 +5028,7 @@ gui_mch_browse(
 	if (ok)
 	    return r;
     }
-#endif
+# endif
 
     if (dflt == NULL)
 	fileBuf[0] = NUL;
@@ -5557,10 +5680,10 @@ set_tabline_font(void)
      * and the tab border is included as 7.
      */
     gui.tabline_height = tm.tmHeight + tm.tmInternalLeading + 7;
-#if defined(FEAT_WINUI)
+# if defined(FEAT_WINUI)
     if (s_tabview_active)
 	gui.tabline_height = 0;
-#endif
+# endif
 }
 #else
 # define set_tabline_font()
@@ -6052,6 +6175,19 @@ _WndProc(
     s_uMsg = uMsg;
     s_wParam = wParam;
 
+#if defined(FEAT_WINUI)
+    // While a WinUI dialog is shown, like the owner of a modal dialog: the
+    // window can't be moved or resized, and toolbar/menu commands are dropped
+    // (they would otherwise be queued and run when the dialog closes).
+    if (WinUI_DialogActive())
+    {
+	if (uMsg == WM_COMMAND)
+	    return 0L;
+	if (uMsg == WM_WINDOWPOSCHANGING)
+	    ((WINDOWPOS *)lParam)->flags |= SWP_NOMOVE | SWP_NOSIZE;
+    }
+#endif
+
     switch (uMsg)
     {
 	HANDLE_MSG(hwnd, WM_DEADCHAR,	_OnDeadChar);
@@ -6125,6 +6261,22 @@ _WndProc(
 
 #if defined(FEAT_WINUI) && defined(FEAT_MENU)
     case WM_SYSCOMMAND:
+	// Like a modal dialog owner: no closing, moving, resizing, maximizing
+	// or minimizing while a WinUI dialog is shown (caption buttons, title
+	// bar drag, Alt-F4, system menu).
+	if (WinUI_DialogActive())
+	{
+	    switch (wParam & 0xFFF0)
+	    {
+		case SC_CLOSE:
+		case SC_MOVE:
+		case SC_SIZE:
+		case SC_MAXIMIZE:
+		case SC_MINIMIZE:
+		case SC_RESTORE:
+		    return 0L;
+	    }
+	}
 	// Alt-key, Alt and F10 open the WinUI menu bar.  A space is for the
 	// system menu.
 	if (s_winui_menubar && gui.menu_is_active
@@ -6168,24 +6320,7 @@ _WndProc(
 	// lParam == "ImmersiveColorSet"; re-colour the title bar and tabs.
 	if (s_titlebar_active && lParam != 0
 		&& wcscmp((WCHAR *)lParam, L"ImmersiveColorSet") == 0)
-	{
-	    // Window frame and menus first, then re-apply our caption-button/
-	    // tab colours so they win over the frame re-theming.
-	    gui_mch_set_dark_theme(winui_is_dark_mode());
-	    SetWindowPos(s_hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE
-			    | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-	    WinUI_UpdateTheme();
-	    gui_mch_update_tabline();
-# ifdef FEAT_TOOLBAR
-	    // Re-render the toolbar glyphs in the new colour and repaint the
-	    // (custom-drawn) toolbar background.
-	    if (s_toolbarhwnd != NULL && create_toolbar_glyph_imagelists())
-	    {
-		set_toolbar_imagelists();
-		InvalidateRect(s_toolbarhwnd, NULL, TRUE);
-	    }
-# endif
-	}
+	    winui_update_theme();
 #endif
 	return _OnSettingChange((UINT)wParam);
 
@@ -6703,6 +6838,11 @@ gui_mch_init(void)
     }
 
 #if defined(FEAT_WINUI)
+    // The vimrc was already sourced: 'd' in 'guioptions' forces the dark
+    // theme, set it before creating the title bar and tabs.
+    s_winui_force_dark = vim_strchr(p_go, GO_DARKTHEME) != NULL;
+    WinUI_SetForceDark(s_winui_force_dark);
+
     // Custom title bar with the tabs shown in it (like Notepad).
     if (WinUI_TitleBarInit(s_hwnd, &s_titlebar_height,
 					&s_titlebar_left, &s_titlebar_right))
@@ -6746,10 +6886,10 @@ gui_mch_init(void)
 	    // classic Win32 builds behave like standard Vim.
 	    p_stal = 2;
 	}
-	// Follow the system theme for the window frame, scroll bars and menus
+	// Follow the theme for the window frame, scroll bars and menus
 	// (reuses Vim's dark-theme machinery), then force the non-client area
 	// (caption buttons) to repaint with the new theme.
-	gui_mch_set_dark_theme(winui_is_dark_mode());
+	apply_dark_theme(winui_is_dark_mode());
 	SetWindowPos(s_hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE
 			| SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 	WinUI_UpdateTheme();
@@ -8316,7 +8456,7 @@ gui_mch_dialog(
     if ((type < 0) || (type > VIM_LAST_TYPE))
 	type = 0;
 
-#if defined(FEAT_WINUI)
+# if defined(FEAT_WINUI)
     // Use a modern WinUI dialog.  Only falls back to the Win32 dialog when
     // WinUI itself is unavailable (then a non-WinUI build should be used).
     if (s_hwnd != NULL)
@@ -8326,7 +8466,7 @@ gui_mch_dialog(
 	if (r >= 0)
 	    return r;
     }
-#endif
+# endif
 
     // allocate some memory for dialog template
     // TODO should compute this really
@@ -9521,7 +9661,7 @@ create_toolbar_glyph_imagelists(void)
 	return FALSE;
 
     size = TOOLBAR_GLYPH_SIZE * s_dpi / DEFAULT_DPI;
-#if defined(FEAT_WINUI)
+#  if defined(FEAT_WINUI)
     if (winui_is_dark_mode())
     {
 	// Light glyphs on the dark chrome.
@@ -9530,7 +9670,7 @@ create_toolbar_glyph_imagelists(void)
 						RGB(0x80, 0x80, 0x80));
     }
     else
-#endif
+#  endif
     {
 	himl = create_glyph_imagelist(face, size, GetSysColor(COLOR_BTNTEXT));
 	himl_disabled = create_glyph_imagelist(face, size,
@@ -9994,10 +10134,10 @@ initialise_tabline(void)
     s_tabline_wndproc = SubclassWindow(s_tabhwnd, tabline_wndproc);
 
     gui.tabline_height = TABLINE_HEIGHT;
-#if defined(FEAT_WINUI)
+# if defined(FEAT_WINUI)
     if (s_tabview_active)
 	gui.tabline_height = 0;
-#endif
+# endif
 
     set_tabline_font();
 }

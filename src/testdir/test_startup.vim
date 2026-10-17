@@ -138,7 +138,7 @@ func Test_help_arg()
   if RunVim([], [], '--help >Xtestout')
     let lines = readfile('Xtestout')
     call assert_true(len(lines) > 20)
-    call assert_match('Vi IMproved', lines[0])
+    call assert_match('JoliVIM', lines[0])
 
     " check if  couple of lines are there
     let found = []
@@ -163,7 +163,7 @@ func Test_version_arg()
   if RunVim([], [], '--version >Xtestout')
     let lines = readfile('Xtestout')
     call assert_true(len(lines) > 10)
-    call assert_match('Vi IMproved', lines[0])
+    call assert_match('JoliVIM', lines[0])
 
     let idx = indexof(lines, 'v:val =~# "Features included.*:"')
     call assert_true(idx >= 0)
@@ -611,7 +611,7 @@ func Test_invalid_args()
   for opt in ['-K', '--does-not-exist']
     let out = split(system(GetVimCommand() .. ' ' .. opt), "\n")
     call assert_equal(1, v:shell_error)
-    call assert_match('^VIM - Vi IMproved .* (.*)$',              out[0])
+    call assert_match('^JoliVIM .* (.*)$',              out[0])
     call assert_equal('Unknown option argument: "' .. opt .. '"', out[1])
     call assert_equal('More info with: "vim -h"',                 out[2])
   endfor
@@ -619,7 +619,7 @@ func Test_invalid_args()
   for opt in ['-c', '-i', '-s', '-t', '-T', '-u', '-U', '-w', '-W', '--cmd', '--startuptime']
     let out = split(system(GetVimCommand() .. ' '  .. opt), "\n")
     call assert_equal(1, v:shell_error)
-    call assert_match('^VIM - Vi IMproved .* (.*)$',             out[0])
+    call assert_match('^JoliVIM .* (.*)$',             out[0])
     call assert_equal('Argument missing after: "' .. opt .. '"', out[1])
     call assert_equal('More info with: "vim -h"',                out[2])
   endfor
@@ -633,7 +633,7 @@ func Test_invalid_args()
           \    ]
       let out = split(system(GetVimCommand() .. ' '  .. opt), "\n")
       call assert_equal(1, v:shell_error)
-      call assert_match('^VIM - Vi IMproved .* (.*)$',             out[0])
+      call assert_match('^JoliVIM .* (.*)$',             out[0])
       call assert_equal('Argument missing after: "' .. opt .. '"', out[1])
       call assert_equal('More info with: "vim -h"',                out[2])
     endfor
@@ -642,7 +642,7 @@ func Test_invalid_args()
   if has('gui_gtk') && has("xterm_clipboard")
     let out = split(system(GetVimCommand() .. ' --display'), "\n")
     call assert_equal(1, v:shell_error)
-    call assert_match('^VIM - Vi IMproved .* (.*)$',         out[0])
+    call assert_match('^JoliVIM .* (.*)$',         out[0])
     call assert_equal('Argument missing after: "--display"', out[1])
     call assert_equal('More info with: "vim -h"',            out[2])
   endif
@@ -650,20 +650,20 @@ func Test_invalid_args()
   if has('xterm_clipboard')
     let out = split(system(GetVimCommand() .. ' -display'), "\n")
     call assert_equal(1, v:shell_error)
-    call assert_match('^VIM - Vi IMproved .* (.*)$',         out[0])
+    call assert_match('^JoliVIM .* (.*)$',         out[0])
     call assert_equal('Argument missing after: "-display"', out[1])
     call assert_equal('More info with: "vim -h"',            out[2])
   endif
 
   let out = split(system(GetVimCommand() .. ' -ix'), "\n")
   call assert_equal(1, v:shell_error)
-  call assert_match('^VIM - Vi IMproved .* (.*)$',          out[0])
+  call assert_match('^JoliVIM .* (.*)$',          out[0])
   call assert_equal('Garbage after option argument: "-ix"', out[1])
   call assert_equal('More info with: "vim -h"',             out[2])
 
   let out = split(system(GetVimCommand() .. ' - xxx'), "\n")
   call assert_equal(1, v:shell_error)
-  call assert_match('^VIM - Vi IMproved .* (.*)$',    out[0])
+  call assert_match('^JoliVIM .* (.*)$',    out[0])
   call assert_equal('Too many edit arguments: "xxx"', out[1])
   call assert_equal('More info with: "vim -h"',       out[2])
 
@@ -672,7 +672,7 @@ func Test_invalid_args()
     for opt in ['-t', '-q']
       let out = split(system(GetVimCommand() .. repeat(' ' .. opt .. ' foo', 2)), "\n")
       call assert_equal(1, v:shell_error)
-      call assert_match('^VIM - Vi IMproved .* (.*)$',              out[0])
+      call assert_match('^JoliVIM .* (.*)$',              out[0])
       call assert_equal('Too many edit arguments: "' .. opt .. '"', out[1])
       call assert_equal('More info with: "vim -h"',                 out[2])
     endfor
@@ -683,7 +683,7 @@ func Test_invalid_args()
     call assert_equal(1, v:shell_error)
     " FIXME: The error message given by Vim is not ideal in case of repeated
     " -S foo since it does not mention -S.
-    call assert_match('^VIM - Vi IMproved .* (.*)$',                                    out[0])
+    call assert_match('^JoliVIM .* (.*)$',                                    out[0])
     call assert_equal('Too many "+command", "-c command" or "--cmd command" arguments', out[1])
     call assert_equal('More info with: "vim -h"',                                       out[2])
   endfor
@@ -691,14 +691,14 @@ func Test_invalid_args()
   if has('gui_gtk')
     let out = split(system(GetVimCommand() .. ' --socketid'), "\n")
     call assert_equal(1, v:shell_error)
-    call assert_match('^VIM - Vi IMproved .* (.*)$',          out[0])
+    call assert_match('^JoliVIM .* (.*)$',          out[0])
     call assert_equal('Argument missing after: "--socketid"', out[1])
     call assert_equal('More info with: "vim -h"',             out[2])
 
     for opt in ['--socketid x', '--socketid 0xg']
       let out = split(system(GetVimCommand() .. ' ' .. opt), "\n")
       call assert_equal(1, v:shell_error)
-      call assert_match('^VIM - Vi IMproved .* (.*)$',        out[0])
+      call assert_match('^JoliVIM .* (.*)$',        out[0])
       call assert_equal('Invalid argument for: "--socketid"', out[1])
       call assert_equal('More info with: "vim -h"',           out[2])
     endfor
@@ -1336,9 +1336,9 @@ func Test_h_arg()
   " Can't catch the output of gvim.
   CheckNotGui
   let l = systemlist(GetVimProg() .. ' -h')
-  call assert_match('^VIM - Vi IMproved', l[0])
+  call assert_match('^JoliVIM', l[0])
   let l = systemlist(GetVimProg() .. ' -?')
-  call assert_match('^VIM - Vi IMproved', l[0])
+  call assert_match('^JoliVIM', l[0])
 endfunc
 
 " Test for the "-F" (farsi) argument

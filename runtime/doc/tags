@@ -2320,6 +2320,8 @@ $quote	eval.txt	/*$quote*
 :abc	map.txt	/*:abc*
 :abclear	map.txt	/*:abclear*
 :abo	windows.txt	/*:abo*
+:abou	starting.txt	/*:abou*
+:about	starting.txt	/*:about*
 :aboveleft	windows.txt	/*:aboveleft*
 :abstract	vim9class.txt	/*:abstract*
 :al	windows.txt	/*:al*

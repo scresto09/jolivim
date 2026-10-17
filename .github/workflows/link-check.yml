@@ -1,9 +1,8 @@
 # .github/workflows/link-check.yml
 name: Check Links
+# JoliVIM: manual only, the weekly run only reports links in Vim's own files.
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 3 * * 0' # Every Sunday at 03:00 UTC
 jobs:
   lychee:
     runs-on: ubuntu-latest

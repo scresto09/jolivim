@@ -1,4 +1,4 @@
-*starting.txt*	For Vim version 9.2.  Last change: 2026 Sep 08
+*starting.txt*	For Vim version 9.2.  Last change: 2026 Oct 18
 
 
 		  VIM REFERENCE MANUAL	  by Bram Moolenaar
@@ -1214,6 +1214,10 @@ those who don't know what Vim is).  It is removed as soon as the display is
 redrawn in any way.  To see the message again, use the ":intro" command (if
 there is not enough room, you will see only part of it).
    To avoid the intro message on startup, add the 'I' flag to 'shortmess'.
+
+							*:abou* *:about*
+:abou[t]		In the WinUI GUI: show the "About" dialog.  Otherwise
+			the same as |:intro|.
 
 							*info-message*
 The |--help| and |--version| arguments cause Vim to print a message and then

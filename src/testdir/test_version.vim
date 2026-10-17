@@ -6,7 +6,7 @@ func Test_version()
   let v2 = execute('version')
   call assert_equal(v1, v2)
 
-  call assert_match("^\n\nVIM - Vi IMproved .*", v1)
+  call assert_match("^\n\nJoliVIM .*", v1)
 endfunc
 
 func Test_version_redirect()

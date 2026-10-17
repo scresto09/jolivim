@@ -705,6 +705,7 @@ SRC_DOS =	\
 		src/os_mswin.c \
 		src/os_win32.h \
 		src/proto/gui_w32.pro \
+		src/proto/gui_w32_winui.pro \
 		src/proto/if_ole.pro \
 		src/proto/os_win32.pro \
 		src/proto/os_mswin.pro \

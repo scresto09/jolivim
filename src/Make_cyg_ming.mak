@@ -11,7 +11,7 @@
 # Tested on Win32 NT 4 and Win95.
 #
 # To make everything, just 'make -f Make_ming.mak'.
-# To make just e.g. gvim.exe, 'make -f Make_ming.mak gvim.exe'.
+# To make just e.g. jvim.exe, 'make -f Make_ming.mak jvim.exe'.
 # After a run, you can 'make -f Make_ming.mak clean' to clean up.
 #
 # NOTE: Sometimes 'GNU Make' will stop after building vimrun.exe -- I think
@@ -59,11 +59,11 @@ COVERAGE=no
 # Set to SIZE for size, SPEED for speed, MAXSPEED for maximum optimization.
 OPTIMIZE=MAXSPEED
 
-# Set to yes to make gvim, no for vim.
+# Set to yes to make jvim, no for vim.
 GUI=yes
 
 # Set to yes to enable the DLL support (EXPERIMENTAL).
-# Creates vim{32,64}.dll, and stub gvim.exe and vim.exe.
+# Creates vim{32,64}.dll, and stub jvim.exe and vim.exe.
 # "GUI" should be also set to "yes".
 #VIMDLL=yes
 
@@ -1048,7 +1048,7 @@ LFLAGS += -municode
 
 ifeq ($(VIMDLL),yes)
 VIMEXE := vim$(DEBUG_SUFFIX).exe
-GVIMEXE := gvim$(DEBUG_SUFFIX).exe
+GVIMEXE := jvim$(DEBUG_SUFFIX).exe
  ifeq ($(ARCH),x86-64)
 VIMDLLBASE := vim64$(DEBUG_SUFFIX)
  else
@@ -1071,7 +1071,7 @@ OBJ += $(GUIOBJ) $(CUIOBJ)
 OUTDIR = dobj$(DEBUG_SUFFIX)$(MZSCHEME_SUFFIX)$(ARCH)
 MAIN_TARGET = $(GVIMEXE) $(VIMEXE) $(VIMDLLBASE).dll
 else ifeq ($(GUI),yes)
-TARGET := gvim$(DEBUG_SUFFIX).exe
+TARGET := jvim$(DEBUG_SUFFIX).exe
 DEFINES += $(DEF_GUI)
 OBJ += $(GUIOBJ)
 LFLAGS += -mwindows
@@ -1223,11 +1223,11 @@ $(TARGET): $(OBJ)
 endif
 
 upx: exes
-	upx gvim.exe
+	upx jvim.exe
 	upx vim.exe
 
 mpress: exes
-	mpress gvim.exe
+	mpress jvim.exe
 	mpress vim.exe
 
 xxd/xxd.exe: xxd/xxd.c

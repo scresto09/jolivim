@@ -318,6 +318,11 @@ extern char_u *vimpty_getenv(const char_u *string);	// in misc2.c
 #  endif
 #  ifdef FEAT_GUI_MSWIN
 #   include "gui_w32.pro"
+#   ifdef FEAT_WINUI
+// Hand written: gui_w32_winui.c is not in the Unix Makefile, so "make
+// proto" does not generate it.
+#    include "gui_w32_winui.pro"
+#   endif
 #  endif
 #  ifdef FEAT_GUI_GTK
 #   ifdef USE_GTK4
