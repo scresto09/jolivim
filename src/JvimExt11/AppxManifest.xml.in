@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Manifest of the package that adds the Vim entry at the root of the
+  Windows 11 File Explorer context menu.
+
+  Windows 11 only shows the entries of applications with a package identity
+  there.  This is a package with external location (also called "sparse
+  package"): it only contains this manifest, the files are those of the Vim
+  directory, given as external location when the installer registers the
+  package:
+
+    Add-AppxPackage -Path jvimext11.msix -ExternalLocation <Vim directory>
+
+  All the paths below are relative to the Vim directory (where jvim.exe is).
+
+  "nmake -f Make_mvc.mak msix" fills the placeholders and creates the
+  (unsigned) jvimext11.msix:
+    @PUBLISHER@  subject of the certificate used to sign the package
+    @ARCH@       x64 or arm64, like jvimext11.dll
+
+  The package doesn't depend on the version of Vim, so that a signed package
+  can be used for several versions.  Increase its Version when this file
+  changes.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
+  xmlns:desktop5="http://schemas.microsoft.com/appx/manifest/desktop/windows10/5"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  IgnorableNamespaces="uap uap10 rescap desktop4 desktop5 com">
+  <Identity Name="Vim.JvimExt11" ProcessorArchitecture="@ARCH@"
+            Publisher="@PUBLISHER@" Version="1.0.0.0" />
+  <Properties>
+    <DisplayName>Vim</DisplayName>
+    <PublisherDisplayName>The Vim Project</PublisherDisplayName>
+    <Logo>JvimExt11\Assets\StoreLogo.png</Logo>
+    <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
+  </Properties>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22000.0"
+                        MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+  <Resources>
+    <!-- Languages of lang/*.rc, the first one is the default. -->
+    <Resource Language="en-us" />
+    <Resource Language="fr" />
+  </Resources>
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <rescap:Capability Name="unvirtualizedResources" />
+  </Capabilities>
+  <Applications>
+    <!-- Every package needs an application: jvimext11_cfg.exe is the
+         settings window.  AppListEntry="none": not listed in the Start menu
+         nor in the installed apps, the installer creates the shortcuts. -->
+    <Application Id="JvimExt11" Executable="JvimExt11\jvimext11_cfg.exe"
+                 uap10:TrustLevel="mediumIL"
+                 uap10:RuntimeBehavior="win32App">
+      <uap:VisualElements AppListEntry="none" DisplayName="Vim"
+                          Description="Edit files and folders with Vim from the Windows 11 context menu"
+                          BackgroundColor="transparent"
+                          Square150x150Logo="JvimExt11\Assets\JoliVIM150x150Logo.png"
+                          Square44x44Logo="JvimExt11\Assets\JoliVIM44x44Logo.png" />
+      <Extensions>
+        <desktop4:Extension Category="windows.fileExplorerContextMenus">
+          <desktop4:FileExplorerContextMenus>
+            <!-- A single verb, so that Explorer shows it at the root of the
+                 menu (several verbs are grouped in a submenu).  The same
+                 verb is declared for files and folders. -->
+            <desktop5:ItemType Type="*">
+              <desktop5:Verb Id="EditWithVim"
+                             Clsid="AF778FC4-B163-466E-9EB9-79E0224B7B24" />
+            </desktop5:ItemType>
+            <!-- Folders: Vim shows them with netrw. -->
+            <desktop5:ItemType Type="Directory">
+              <desktop5:Verb Id="EditWithVim"
+                             Clsid="AF778FC4-B163-466E-9EB9-79E0224B7B24" />
+            </desktop5:ItemType>
+          </desktop4:FileExplorerContextMenus>
+        </desktop4:Extension>
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:SurrogateServer DisplayName="Vim context menu">
+              <com:Class Id="AF778FC4-B163-466E-9EB9-79E0224B7B24"
+                         Path="JvimExt11\jvimext11.dll"
+                         ThreadingModel="STA" />
+            </com:SurrogateServer>
+          </com:ComServer>
+        </com:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+</Package>

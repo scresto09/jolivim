@@ -1,4 +1,4 @@
-INSTALLpc.txt - Installation of Vim on PC - Last Update: 2025 Aug 10
+INSTALLpc.txt - Installation of Vim on PC - Last Update: 2026 Oct 09
 
 This file contains instructions for compiling Vim. If you already have an
 executable version of Vim, you don't need this.
@@ -35,10 +35,11 @@ Contents:
 12. Building with Tcl support
 13. Building with DirectX (DirectWrite) support
 14. Building with libsodium support
-15. Windows 3.1
-16. MS-DOS
+15. Building with the WinUI 3 popup menu
+16. Windows 3.1
+17. MS-DOS
 
-17. Installing after building from sources
+18. Installing after building from sources
 
 
 The currently recommended way (that means it has been verified to work) is
@@ -982,20 +983,55 @@ Or you can set the path to libsodium explicitly:
     (libsodium.dll will be used as the libsodium DLL name.)
 
 
-15. Windows 3.1x
+15. Building with the WinUI 3 popup menu
+========================================
+
+The popup menu (right mouse button) can be shown with WinUI 3, like the
+context menu of the Windows 11 Notepad: Undo, Cut, Copy, Paste, Delete and
+Select All are shown as icons in a bar at the top, the other items in a list
+below it.  This is only supported with MSVC and requires Windows 10 or later.
+
+1. Install the Windows App Runtime, use "winget search WindowsAppRuntime" to
+   find the name of the package.  Its version must not be older than the
+   Windows App SDK used for building.
+
+2. Get the Windows App SDK with NuGet:
+
+    nuget install Microsoft.WindowsAppSDK
+
+3. Build with WINUI=yes:
+
+    nmake -f Make_mvc.mak GUI=yes WINUI=yes
+
+   The package is searched for in the current directory, its parent
+   directories, the user profile and the NuGet cache.  When it is somewhere
+   else, specify the directory where "nuget install" put it:
+
+    nmake -f Make_mvc.mak GUI=yes WINUI=yes WINUI_SDK=C:\path\to\packages
+
+   The build generates the C++/WinRT headers with "winui_gen.ps1", using
+   cppwinrt.exe from the Windows SDK, and copies
+   Microsoft.WindowsAppRuntime.Bootstrap.dll next to gvim.exe.  Keep that DLL
+   with gvim.exe when installing it.
+
+When the Windows App Runtime or the bootstrap DLL is not available, the
+classic Win32 popup menu is used.
+
+
+16. Windows 3.1x
 ================
 
 The Windows 3.1x support was removed in patch 7.4.1364.
 
 
-16. MS-DOS
+17. MS-DOS
 ==========
 
 The MS-DOS support was removed in patch 7.4.1399.  Only very old Vim versions
 work on MS-DOS because of the limited amount of memory available.
 
 
-17. Installing after building from sources
+18. Installing after building from sources
 ==========================================
 
 [provided by Michael Soyka, updated by Ken Takata]

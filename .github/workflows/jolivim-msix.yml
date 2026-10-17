@@ -1,0 +1,87 @@
+# Build the JoliVIM MSIX package for x64 and arm64.
+#
+# The arm64 package is cross-compiled from the x64 GitHub runner
+# (vcvarsall "amd64_arm64").  Both packages are built unsigned and uploaded as
+# workflow artifacts; sign them locally or let the Microsoft Store sign them.
+#
+# See src/Make_mvc.mak ("nmake msix") and src/msix/make_msix.ps1.
+name: JoliVIM MSIX
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [JoliVIM]
+    tags: ['v*']
+    paths:
+      - 'src/**'
+      - 'runtime/**'
+      - '.github/workflows/jolivim-msix.yml'
+  pull_request:
+    branches: [JoliVIM]
+    paths:
+      - 'src/**'
+      - '.github/workflows/jolivim-msix.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jolivim-msix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  msix:
+    name: MSIX ${{ matrix.name }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: x64,   cpu: AMD64, arch: amd64 }
+          - { name: arm64, cpu: ARM64, arch: amd64_arm64 }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Target toolchain: native x64, or x64->arm64 cross tools for arm64.
+      - name: Set up MSVC (${{ matrix.arch }})
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Set up NuGet
+        uses: NuGet/setup-nuget@v2
+
+      # gettext/iconv are downloaded by make_msix.ps1 and checked against their
+      # SHA-256, so caching them is safe; keyed on the script that pins them.
+      - name: Cache gettext/iconv downloads
+        uses: actions/cache@v4
+        with:
+          path: src/msix/cache
+          key: msix-cache-${{ hashFiles('src/msix/make_msix.ps1') }}
+
+      - name: Install the Windows App SDK
+        shell: pwsh
+        run: >
+          nuget install Microsoft.WindowsAppSDK -NonInteractive
+          -OutputDirectory "$env:GITHUB_WORKSPACE\packages"
+
+      - name: Build JoliVIM and the MSIX
+        shell: cmd
+        working-directory: src
+        run: >
+          nmake -f Make_mvc.mak GUI=yes WINUI=yes CPU=${{ matrix.cpu }}
+          WINUI_SDK="%GITHUB_WORKSPACE%\packages" msix
+
+      - name: Validate the package
+        shell: cmd
+        working-directory: src
+        run: nmake -f Make_mvc.mak GUI=yes WINUI=yes CPU=${{ matrix.cpu }} testmsix
+
+      - name: Upload the MSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: JoliVIM-${{ matrix.name }}-msix
+          path: src/JoliVIM_*_*.msix
+          if-no-files-found: error

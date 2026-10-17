@@ -1,7 +1,7 @@
 " These commands create the option window.
 "
 " Maintainer:	The Vim Project <https://github.com/vim/vim>
-" Last Change:	2026 Sep 30
+" Last Change:	2026 Oct 09
 " Former Maintainer:	Bram Moolenaar <Bram@vim.org>
 
 " If there already is an option window, jump to that one.
@@ -704,6 +704,10 @@ if has("gui")
     endif
     call <SID>AddOption("guiheadroom", gettext("room (in pixels) left above/below the window"))
     call append("$", " \tset ghr=" . &ghr)
+  endif
+  if exists("+toolbariconstyle")
+    call <SID>AddOption("toolbariconstyle", gettext("\"win11\", \"classic\" or \"auto\"; style of toolbar icons"))
+    call <SID>OptionG("tbst", &tbst)
   endif
   if has("gui_gtk") || has("gui_win32")
     call <SID>AddOption("guiligatures", gettext("list of ASCII characters that can be combined into complex\nshapes"))

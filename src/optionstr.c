@@ -115,6 +115,10 @@ static char *(p_toolbar_values[]) = {"text", "icons", "tooltips", "horiz", NULL}
 #if defined(FEAT_TOOLBAR) && defined(FEAT_GUI_GTK)
 static char *(p_tbis_values[]) = {"tiny", "small", "medium", "large", "huge", "giant", NULL};
 #endif
+#if defined(FEAT_TOOLBAR) && defined(FEAT_WINUI)
+static char *(p_tbst_values[]) = {"win11", "classic", "auto", NULL};
+static unsigned tbst_flags = 0;
+#endif
 #if defined(UNIX) || defined(VMS)
 static char *(p_ttym_values[]) = {"xterm", "xterm2", "dec", "netterm", "jsbterm", "pterm", "urxvt", "sgr", NULL};
 #endif
@@ -196,6 +200,9 @@ didset_string_options(void)
 #endif
 #if defined(FEAT_TOOLBAR) && defined(FEAT_GUI_GTK)
     (void)opt_strings_flags(p_tbis, p_tbis_values, &tbis_flags, FALSE);
+#endif
+#if defined(FEAT_TOOLBAR) && defined(FEAT_WINUI)
+    (void)opt_strings_flags(p_tbst, p_tbst_values, &tbst_flags, FALSE);
 #endif
     (void)opt_strings_flags(p_swb, p_swb_values, &swb_flags, TRUE);
     (void)opt_strings_flags(p_tcl, p_tcl_values, &tcl_flags, TRUE);
@@ -5044,6 +5051,36 @@ expand_set_toolbariconsize(
 	    args,
 	    p_tbis_values,
 	    ARRAY_LENGTH(p_tbis_values) - 1,
+	    numMatches,
+	    matches);
+}
+#endif
+
+#if defined(FEAT_TOOLBAR) && defined(FEAT_WINUI)
+/*
+ * The 'toolbariconstyle' option is changed.  MS-Windows with WinUI only.
+ */
+    char *
+did_set_toolbariconstyle(optset_T *args UNUSED)
+{
+    if (opt_strings_flags(p_tbst, p_tbst_values, &tbst_flags, FALSE) != OK)
+	return e_invalid_argument;
+
+    out_flush();
+    gui_mch_toolbar_reload();
+    return NULL;
+}
+
+    int
+expand_set_toolbariconstyle(
+    optexpand_T	*args,
+    int		*numMatches,
+    char_u	***matches)
+{
+    return expand_set_opt_string(
+	    args,
+	    p_tbst_values,
+	    ARRAY_LENGTH(p_tbst_values) - 1,
 	    numMatches,
 	    matches);
 }

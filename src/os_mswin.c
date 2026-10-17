@@ -796,7 +796,7 @@ check_str_len(char_u *str)
 }
 
 /*
- * Passed to do_in_runtimepath() to load a vim.ico file.
+ * Passed to do_in_runtimepath() to load a joli.ico file.
  */
     static void
 mch_icon_load_cb(char_u *fname, void *cookie)
@@ -817,7 +817,7 @@ mch_icon_load_cb(char_u *fname, void *cookie)
     int
 mch_icon_load(HANDLE *iconp)
 {
-    return do_in_runtimepath((char_u *)"bitmaps/vim.ico",
+    return do_in_runtimepath((char_u *)"bitmaps/joli.ico",
 						  0, mch_icon_load_cb, iconp);
 }
 
@@ -1073,7 +1073,7 @@ static int		prt_number_width;
 static int		prt_left_margin;
 static int		prt_right_margin;
 static int		prt_top_margin;
-static char_u		szAppName[] = TEXT("VIM");
+static char_u		szAppName[] = TEXT("JoliVIM");
 static HWND		hDlgPrint;
 static int		*bUserAbort = NULL;
 static char_u		*prt_name = NULL;
@@ -1439,10 +1439,52 @@ mch_print_init(prt_settings_T *psettings, char_u *jobname, int forceit)
 		goto init_fail_dlg;
 	}
     }
-    else if (PrintDlgW(&prt_dlg) == 0)
-	goto init_fail_dlg;
     else
     {
+#if defined(FEAT_WINUI)
+	// Use the more modern PrintDlgEx (XP-style printer list).  It needs a
+	// COM-initialized thread (WinUI already did that) and does not support
+	// PD_RETURNDEFAULT, so it is only used for the interactive case; fall
+	// back to the classic PrintDlgW if it is not available.
+	PRINTDLGEXW	pdx;
+	PRINTPAGERANGE	pr;
+	HRESULT		hr;
+
+	CLEAR_FIELD(pdx);
+	pdx.lStructSize = sizeof(PRINTDLGEXW);
+	pdx.hwndOwner = s_hwnd;
+	pdx.hDevMode = prt_dlg.hDevMode;
+	pdx.hDevNames = prt_dlg.hDevNames;
+	pdx.Flags = PD_NOPAGENUMS | PD_NOSELECTION | PD_NOCURRENTPAGE
+							    | PD_RETURNDC;
+	pdx.nStartPage = START_PAGE_GENERAL;
+	CLEAR_FIELD(pr);
+	pdx.nMaxPageRanges = 1;
+	pdx.lpPageRanges = &pr;
+
+	hr = PrintDlgExW(&pdx);
+	if (SUCCEEDED(hr))
+	{
+	    if (pdx.dwResultAction == PD_RESULT_CANCEL)
+	    {
+		if (pdx.hDC != NULL)
+		    DeleteDC(pdx.hDC);
+		prt_dlg.hDevMode = pdx.hDevMode;
+		prt_dlg.hDevNames = pdx.hDevNames;
+		goto init_fail_dlg;
+	    }
+	    prt_dlg.hDC = pdx.hDC;
+	    prt_dlg.hDevMode = pdx.hDevMode;
+	    prt_dlg.hDevNames = pdx.hDevNames;
+	    prt_dlg.Flags = pdx.Flags;
+	    prt_dlg.nCopies = (WORD)pdx.nCopies;
+	}
+	else		// PrintDlgEx unavailable: classic dialog.
+#endif
+	{
+	    if (PrintDlgW(&prt_dlg) == 0)
+		goto init_fail_dlg;
+	}
 	/*
 	 * keep the previous driver context
 	 */
@@ -3111,13 +3153,29 @@ get_logfont(
     {
 # if defined(FEAT_GUI_MSWIN)
 	CHOOSEFONTW	cf;
+
+	if (lastlf != NULL)
+	    *lf = *lastlf;
+#  if defined(FEAT_WINUI)
+	// Modern WinUI font picker; fall through to ChooseFontW only when the
+	// WinUI runtime is not available.
+	{
+	    int r = gui_mch_winui_choose_font(lf);
+
+	    if (r == 1)
+	    {
+		ret = OK;
+		goto theend;
+	    }
+	    if (r == 0)		// cancelled
+		goto theend;
+	}
+#  endif
 	// if name is "*", bring up std font dialog:
 	CLEAR_FIELD(cf);
 	cf.lStructSize = sizeof(cf);
 	cf.hwndOwner = s_hwnd;
 	cf.Flags = CF_SCREENFONTS | CF_FIXEDPITCHONLY | CF_INITTOLOGFONTSTRUCT;
-	if (lastlf != NULL)
-	    *lf = *lastlf;
 	cf.lpLogFont = lf;
 	cf.nFontType = 0 ; //REGULAR_FONTTYPE;
 	if (ChooseFontW(&cf))

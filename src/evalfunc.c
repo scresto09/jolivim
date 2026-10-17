@@ -8242,6 +8242,13 @@ f_has(typval_T *argvars, typval_T *rettv)
 		0
 #endif
 		},
+	{"winui",		// JoliVIM: WinUI 3 GUI, guards options like 'tbst'
+#ifdef FEAT_WINUI
+		1
+#else
+		0
+#endif
+		},
 	{"iconv",
 #if defined(HAVE_ICONV_H) && defined(USE_ICONV)
 		1

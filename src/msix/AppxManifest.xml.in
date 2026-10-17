@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Manifest of the MSIX package of the whole Vim: jvim.exe, vim.exe, the
+  runtime files and the Windows 11 context menu entry (JvimExt11).  Unlike
+  JvimExt11\AppxManifest.xml.in (a package with external location, added to
+  a Vim installed by the installer), this package contains all the files and
+  needs no installer.
+
+  make_msix.ps1 (called by "nmake -f Make_mvc.mak msix") fills the
+  placeholders:
+    @NAME@               identity name (reserved in Partner Center for the
+                         Microsoft Store)
+    @PUBLISHER@          subject of the certificate used to sign the package
+                         (for the Store: the publisher ID of the account)
+    @PUBLISHERNAME@      publisher display name
+    @VERSION@            major.minor.patchlevel.0 of Vim
+    @ARCH@               x64 or arm64, like jvim.exe
+    @DEPENDENCIES@       the Windows App Runtime, when built with WINUI=yes
+  and removes the block between the "BEGIN vim" and "END vim" comments when
+  vim.exe was not built (build with VIMDLL=yes to get both jvim.exe and
+  vim.exe).
+
+  The texts "ms-resource:<name>" are translated in msix\Strings\<language>\
+  Resources.resw and the logos have variants for each scale and size in
+  msix\Assets: make_msix.ps1 indexes them in resources.pri.  The display
+  name "JoliVIM" is not translated: for the Store it must be the reserved
+  name.
+
+  All the files are at the root of the package: jvim.exe uses it as $VIM and
+  $VIMRUNTIME.  The installation directory is read-only, the user files go
+  in ~/vimfiles and ~/_vimrc as usual.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+  xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
+  xmlns:desktop5="http://schemas.microsoft.com/appx/manifest/desktop/windows10/5"
+  xmlns:desktop6="http://schemas.microsoft.com/appx/manifest/desktop/windows10/6"
+  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
+  IgnorableNamespaces="uap uap3 uap5 rescap desktop4 desktop5 desktop6 com">
+  <Identity Name="@NAME@" ProcessorArchitecture="@ARCH@"
+            Publisher="@PUBLISHER@" Version="@VERSION@" />
+  <Properties>
+    <DisplayName>JoliVIM</DisplayName>
+    <PublisherDisplayName>@PUBLISHERNAME@</PublisherDisplayName>
+    <Logo>msix\StoreLogo.png</Logo>
+    <Description>Vim for Windows 11, with a WinUI 3 look.</Description>
+    <!-- Vim and its plugins write files in AppData and settings in the
+         registry: let them see the real ones, shared with other programs,
+         instead of a private copy of the package. -->
+    <desktop6:FileSystemWriteVirtualization>disabled</desktop6:FileSystemWriteVirtualization>
+    <desktop6:RegistryWriteVirtualization>disabled</desktop6:RegistryWriteVirtualization>
+  </Properties>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.22000.0"
+                        MaxVersionTested="10.0.26100.0" />@DEPENDENCIES@
+  </Dependencies>
+  <Resources>
+    <!-- Languages of JvimExt11\lang\*.rc, the first one is the default. -->
+    <Resource Language="en-us" />
+    <Resource Language="fr" />
+  </Resources>
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <rescap:Capability Name="unvirtualizedResources" />
+  </Capabilities>
+  <Applications>
+    <Application Id="jvim" Executable="jvim.exe"
+                 EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements DisplayName="JoliVIM"
+                          Description="Vim for Windows 11"
+                          BackgroundColor="transparent"
+                          Square150x150Logo="msix\JoliVIM150x150Logo.png"
+                          Square44x44Logo="msix\JoliVIM44x44Logo.png" />
+      <Extensions>
+        <!-- "jvim" in a command prompt, instead of adding the directory to
+             PATH. -->
+        <uap5:Extension Category="windows.appExecutionAlias">
+          <uap5:AppExecutionAlias>
+            <uap5:ExecutionAlias Alias="jvim.exe" />
+          </uap5:AppExecutionAlias>
+        </uap5:Extension>
+        <!-- Listed in "Open with" for these types, not made the default. -->
+        <uap3:Extension Category="windows.fileTypeAssociation">
+          <uap3:FileTypeAssociation Name="text" Parameters="&quot;%1&quot;">
+            <uap:DisplayName>ms-resource:TextFileType</uap:DisplayName>
+            <uap:SupportedFileTypes>
+              <uap:FileType>.txt</uap:FileType>
+              <uap:FileType>.text</uap:FileType>
+              <uap:FileType>.log</uap:FileType>
+              <uap:FileType>.md</uap:FileType>
+              <uap:FileType>.vim</uap:FileType>
+              <uap:FileType>.ini</uap:FileType>
+              <uap:FileType>.cfg</uap:FileType>
+              <uap:FileType>.conf</uap:FileType>
+              <uap:FileType>.json</uap:FileType>
+              <uap:FileType>.xml</uap:FileType>
+              <uap:FileType>.yaml</uap:FileType>
+              <uap:FileType>.yml</uap:FileType>
+              <uap:FileType>.toml</uap:FileType>
+              <uap:FileType>.csv</uap:FileType>
+              <uap:FileType>.c</uap:FileType>
+              <uap:FileType>.h</uap:FileType>
+              <uap:FileType>.cpp</uap:FileType>
+              <uap:FileType>.hpp</uap:FileType>
+              <uap:FileType>.cs</uap:FileType>
+              <uap:FileType>.java</uap:FileType>
+              <uap:FileType>.py</uap:FileType>
+              <uap:FileType>.rb</uap:FileType>
+              <uap:FileType>.pl</uap:FileType>
+              <uap:FileType>.lua</uap:FileType>
+              <uap:FileType>.go</uap:FileType>
+              <uap:FileType>.rs</uap:FileType>
+              <uap:FileType>.js</uap:FileType>
+              <uap:FileType>.ts</uap:FileType>
+              <uap:FileType>.css</uap:FileType>
+              <uap:FileType>.html</uap:FileType>
+              <uap:FileType>.sh</uap:FileType>
+              <uap:FileType>.ps1</uap:FileType>
+              <uap:FileType>.mak</uap:FileType>
+            </uap:SupportedFileTypes>
+          </uap3:FileTypeAssociation>
+        </uap3:Extension>
+        <!-- The Windows 11 context menu entry, see JvimExt11\jvimext11.cpp.
+             A single verb, so that Explorer shows it at the root of the
+             menu (several verbs are grouped in a submenu).  The same verb
+             is declared for files and folders. -->
+        <desktop4:Extension Category="windows.fileExplorerContextMenus">
+          <desktop4:FileExplorerContextMenus>
+            <desktop5:ItemType Type="*">
+              <desktop5:Verb Id="EditWithVim"
+                             Clsid="AF778FC4-B163-466E-9EB9-79E0224B7B24" />
+            </desktop5:ItemType>
+            <!-- Folders: Vim shows them with netrw. -->
+            <desktop5:ItemType Type="Directory">
+              <desktop5:Verb Id="EditWithVim"
+                             Clsid="AF778FC4-B163-466E-9EB9-79E0224B7B24" />
+            </desktop5:ItemType>
+          </desktop4:FileExplorerContextMenus>
+        </desktop4:Extension>
+        <com:Extension Category="windows.comServer">
+          <com:ComServer>
+            <com:SurrogateServer DisplayName="Vim context menu">
+              <com:Class Id="AF778FC4-B163-466E-9EB9-79E0224B7B24"
+                         Path="JvimExt11\jvimext11.dll"
+                         ThreadingModel="STA" />
+            </com:SurrogateServer>
+          </com:ComServer>
+        </com:Extension>
+      </Extensions>
+    </Application>
+    <!-- BEGIN vim -->
+    <!-- "vim" in a command prompt.  Not in the Start menu. -->
+    <Application Id="vim" Executable="vim.exe"
+                 EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements AppListEntry="none" DisplayName="Vim (console)"
+                          Description="Vim in the console"
+                          BackgroundColor="transparent"
+                          Square150x150Logo="msix\JoliVIM150x150Logo.png"
+                          Square44x44Logo="msix\JoliVIM44x44Logo.png" />
+      <Extensions>
+        <uap5:Extension Category="windows.appExecutionAlias">
+          <uap5:AppExecutionAlias desktop4:Subsystem="console">
+            <uap5:ExecutionAlias Alias="vim.exe" />
+          </uap5:AppExecutionAlias>
+        </uap5:Extension>
+      </Extensions>
+    </Application>
+    <!-- END vim -->
+    <!-- The settings of the context menu entry. -->
+    <Application Id="settings" Executable="JvimExt11\jvimext11_cfg.exe"
+                 EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements DisplayName="ms-resource:SettingsDisplayName"
+                          Description="Settings of the Windows 11 context menu entry"
+                          BackgroundColor="transparent"
+                          Square150x150Logo="msix\JoliVIM150x150Logo.png"
+                          Square44x44Logo="msix\JoliVIM44x44Logo.png" />
+    </Application>
+  </Applications>
+</Package>

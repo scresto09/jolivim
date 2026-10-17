@@ -3607,14 +3607,14 @@ intro_message(
     char	*p;
     static char	*(lines[]) =
     {
-	N_("VIM - Vi IMproved"),
+	N_("JoliVIM"),
 	"",
 	N_("version "),
-	N_("by Bram Moolenaar et al."),
+	N_("JoliVIM is open source and freely distributable"),
 #ifdef MODIFIED_BY
 	" ",
 #endif
-	N_("Vim is open source and freely distributable"),
+	"https://github.com/scresto09/jolivim",
 	"",
 	N_("Help poor children in Uganda!"),
 	N_("type  :help Kuwasha<Enter>    for information "),
@@ -3791,4 +3791,18 @@ ex_intro(exarg_T *eap UNUSED)
 #endif
     intro_message(TRUE);
     wait_return(TRUE);
+}
+
+/*
+ * ":about": show the modern GUI "About" dialog when running the GUI, otherwise
+ * fall back to the text intro screen.
+ */
+    void
+ex_about(exarg_T *eap)
+{
+#if defined(FEAT_GUI_MSWIN) && defined(FEAT_WINUI)
+    if (gui.in_use && gui_mch_show_about())
+	return;
+#endif
+    ex_intro(eap);
 }

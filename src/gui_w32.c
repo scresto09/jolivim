@@ -29,6 +29,11 @@
 # include "gui_dwrite.h"
 #endif
 
+#if defined(FEAT_WINUI)
+# include "gui_winui.h"
+# include "gui_w32_winui.h"
+#endif
+
 // values for "dead_key"
 #define DEAD_KEY_OFF			0	// no dead key
 #define DEAD_KEY_SET_DEFAULT		1	// dead key pressed
@@ -42,6 +47,51 @@ static int s_directx_load_attempted = 0;
 # define IS_ENABLE_DIRECTX() (s_directx_enabled && s_dwc != NULL && enc_utf8)
 static int directx_enabled(void);
 static void directx_binddc(void);
+#endif
+
+#if defined(FEAT_WINUI) && defined(FEAT_MENU)
+static int s_winui_menubar = FALSE;	    // using the WinUI menu bar
+static int s_winui_menubar_tried = FALSE;   // tried to create it
+static int s_winui_menubar_dirty = TRUE;    // menus changed, fill it again
+static void winui_menubar_fill(void);
+static void winui_menubar_layout(int resize);
+#endif
+#if defined(FEAT_WINUI)
+static int s_titlebar_active = FALSE;	    // custom title bar is on
+static int s_titlebar_height = 0;	    // title bar height (device px)
+static int s_titlebar_left = 0;		    // left caption inset (device px)
+static int s_titlebar_right = 0;	    // right caption inset (device px)
+static int s_tabview_active = FALSE;	    // TabView in the title bar
+static int winui_titlebar_offset(void);
+static void winui_titlebar_layout(void);
+
+/*
+ * TRUE when Windows apps are set to the dark theme.
+ */
+    static int
+winui_is_dark_mode(void)
+{
+    DWORD   val = 1;		// default: light
+    DWORD   sz = sizeof(val);
+
+    if (RegGetValueW(HKEY_CURRENT_USER,
+	    L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+	    L"AppsUseLightTheme", RRF_RT_REG_DWORD, NULL, &val, &sz)
+							    == ERROR_SUCCESS)
+	return val == 0;
+    return FALSE;
+}
+#endif
+#if defined(FEAT_WINUI) && defined(FEAT_TOOLBAR)
+static void winui_position_toolbar(void);
+#endif
+#if defined(FEAT_WINUI)
+static void winui_clipboard_set(char_u *text);
+static win_T *winui_statusline_win(int row, int col);
+#endif
+#ifdef FEAT_TOOLBAR
+static int create_toolbar_glyph_imagelists(void);
+static void set_toolbar_imagelists(void);
 #endif
 
 #ifdef FEAT_MENU
@@ -273,6 +323,9 @@ gui_mch_set_rendering_options(char_u *s)
 #endif
 
 #include <shellapi.h>
+#if defined(FEAT_WINUI)
+# include <shobjidl.h>	// for IFileDialog (modern file dialogs)
+#endif
 #include <commctrl.h>
 #include <windowsx.h>
 
@@ -363,10 +416,15 @@ static HBRUSH		s_brush = NULL;
 #ifdef FEAT_TOOLBAR
 static HWND		s_toolbarhwnd = NULL;
 static WNDPROC		s_toolbar_wndproc = NULL;
+# ifdef FEAT_WINUI
+static HIMAGELIST	s_toolbar_imagelist = NULL;
+static HIMAGELIST	s_toolbar_disabled_imagelist = NULL;
+static int		s_toolbar_imagelist_dpi = 0;
+# endif
 #endif
 
 #ifdef FEAT_GUI_TABLINE
-static HWND		s_tabhwnd = NULL;
+HWND			s_tabhwnd = NULL;
 static WNDPROC		s_tabline_wndproc = NULL;
 static int		showing_tabline = 0;
 #endif
@@ -374,7 +432,7 @@ static int		showing_tabline = 0;
 static WPARAM		s_wParam = 0;
 static LPARAM		s_lParam = 0;
 
-static HWND		s_textArea = NULL;
+HWND			s_textArea = NULL;
 
 // Set when the text area was painted with the background color only, because
 // the screen contents were not available yet.
@@ -1208,6 +1266,11 @@ _OnMouseButtonDown(
     int y,
     UINT keyFlags)
 {
+#if defined(FEAT_WINUI) && defined(FEAT_MENU)
+    // The focus may still be in the WinUI menu bar.
+    if (s_winui_menubar && GetFocus() != s_hwnd)
+	SetFocus(s_hwnd);
+#endif
     static LONG	s_prevTime = 0;
 
     LONG    currentTime = GetMessageTime();
@@ -1239,6 +1302,47 @@ _OnMouseButtonDown(
 
     if (button < 0)
 	return;
+
+#if defined(FEAT_WINUI)
+    // Right-click on a window's status line: offer "Copy file name".
+    if (button == MOUSE_RIGHT)
+    {
+	win_T	*wp = winui_statusline_win(Y_2_ROW(y), X_2_COL(x));
+
+	if (wp != NULL && wp->w_buffer != NULL)
+	{
+	    char_u *f = wp->w_buffer->b_ffname != NULL
+			    ? wp->w_buffer->b_ffname : wp->w_buffer->b_fname;
+
+	    if (f != NULL && *f != NUL)
+	    {
+		WinUIMenuItem	item;
+		WCHAR		*wlabel;
+		POINT		pt;
+		int		sel;
+
+		pt.x = x;
+		pt.y = y;
+		ClientToScreen(s_textArea, &pt);
+		wlabel = (WCHAR *)enc_to_utf16(
+					(char_u *)_("Copy file name"), NULL);
+		CLEAR_FIELD(item);
+		item.label = wlabel;
+		item.id = 1;
+		item.enabled = TRUE;
+		sel = WinUI_ShowPopupMenu(s_hwnd, &item, 1, pt.x, pt.y);
+		vim_free(wlabel);
+		if (sel >= 0)		// popup shown (selected or dismissed)
+		{
+		    if (sel == 1)
+			winui_clipboard_set(f);
+		    return;		// consume the click
+		}
+		// sel < 0: WinUI unavailable, fall through to normal handling.
+	    }
+	}
+    }
+#endif
 
     repeated_click = ((int)(currentTime - s_prevTime) < p_mouset);
 
@@ -1712,12 +1816,22 @@ gui_mch_set_text_area_pos(int x, int y, int w, int h)
     static int oldx = 0;
     static int oldy = 0;
 
+#if defined(FEAT_WINUI)
+    y += winui_titlebar_offset();
+#endif
     SetWindowPos(s_textArea, NULL, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE);
+#if defined(FEAT_WINUI) && defined(MSWIN_FIND_REPLACE)
+    winui_findbar_reposition();
+#endif
 
 #ifdef FEAT_TOOLBAR
     if (vim_strchr(p_go, GO_TOOLBAR) != NULL)
+# ifdef FEAT_WINUI
+	winui_position_toolbar();
+# else
 	SendMessage(s_toolbarhwnd, WM_SIZE,
 	      (WPARAM)0, MAKELPARAM(w, gui.toolbar_height));
+# endif
 #endif
 #if defined(FEAT_GUI_TABLINE)
     if (showing_tabline)
@@ -1728,6 +1842,14 @@ gui_mch_set_text_area_pos(int x, int y, int w, int h)
 # ifdef FEAT_TOOLBAR
 	if (vim_strchr(p_go, GO_TOOLBAR) != NULL)
 	    top = gui.toolbar_height;
+# endif
+# if defined(FEAT_WINUI) && defined(FEAT_MENU)
+	// The WinUI menu bar is in the client area.
+	if (s_winui_menubar && gui.menu_is_active)
+	    top += gui.menu_height;
+# endif
+# if defined(FEAT_WINUI)
+	top += winui_titlebar_offset();
 # endif
 	GetClientRect(s_hwnd, &rect);
 	MoveWindow(s_tabhwnd, 0, top, rect.right, gui.tabline_height, TRUE);
@@ -1743,6 +1865,9 @@ gui_mch_set_text_area_pos(int x, int y, int w, int h)
 	oldx = x;
 	oldy = y;
     }
+#if defined(FEAT_WINUI)
+    winui_titlebar_layout();
+#endif
 }
 
 
@@ -1770,6 +1895,12 @@ gui_mch_set_scrollbar_pos(
     int		w,
     int		h)
 {
+#if defined(FEAT_WINUI)
+    // The text area is shifted down by the custom title bar (see
+    // gui_mch_set_text_area_pos); shift the scroll bars by the same amount so
+    // the right scroll bar starts below the toolbar, not over it.
+    y += winui_titlebar_offset();
+#endif
     SetWindowPos(sb->id, NULL, x, y, w, h,
 			      SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
 }
@@ -2347,6 +2478,12 @@ process_message(void)
 
     GetMessageW(&msg, NULL, 0, 0);
 
+#if defined(FEAT_WINUI) && defined(FEAT_MENU)
+    // Keys typed in the WinUI menu bar or its menus are for XAML.
+    if (WinUI_PreTranslateMessage(&msg))
+	return;
+#endif
+
 #ifdef FEAT_OLE
     // Look after OLE Automation commands
     if (msg.message == WM_OLE)
@@ -2813,6 +2950,22 @@ gui_mch_clear_all(void)
 gui_mch_enable_menu(int flag)
 {
 #ifdef FEAT_MENU
+# ifdef FEAT_WINUI
+    if (flag && !s_winui_menubar_tried)
+    {
+	s_winui_menubar_tried = TRUE;
+	s_winui_menubar = WinUI_MenuBarInit(s_hwnd);
+    }
+    if (s_winui_menubar)
+    {
+	// The Win32 menu bar is still built, but not shown.
+	SetMenu(s_hwnd, NULL);
+	if (flag && s_winui_menubar_dirty)
+	    winui_menubar_fill();
+	winui_menubar_layout(FALSE);
+	return;
+    }
+# endif
     SetMenu(s_hwnd, flag ? s_menuBar : NULL);
 #endif
 }
@@ -2824,6 +2977,9 @@ gui_mch_set_menu_pos(
     int	    w UNUSED,
     int	    h UNUSED)
 {
+#if defined(FEAT_WINUI) && defined(FEAT_MENU)
+    winui_menubar_layout(FALSE);
+#endif
     // It will be in the right place anyway
 }
 
@@ -2854,6 +3010,14 @@ gui_mch_menu_hidden(
     void
 gui_mch_draw_menubar(void)
 {
+# ifdef FEAT_WINUI
+    if (s_winui_menubar)
+    {
+	if (s_winui_menubar_dirty && gui.menu_is_active)
+	    winui_menubar_fill();
+	return;
+    }
+# endif
     DrawMenuBar(s_hwnd);
 }
 #endif // FEAT_MENU
@@ -3002,6 +3166,9 @@ gui_mch_show_toolbar(int showit)
     }
     else
 	ShowWindow(s_toolbarhwnd, SW_HIDE);
+# if defined(FEAT_WINUI) && defined(FEAT_MENU)
+    winui_menubar_layout(FALSE);
+# endif
 }
 
 // The number of bitmaps is fixed.  Exit is missing!
@@ -3030,6 +3197,7 @@ add_tabline_popup_menu_entry(HMENU pmenu, UINT item_id, char_u *item_text)
     vim_free(wn);
 }
 
+
     static void
 show_tabline_popup_menu(void)
 {
@@ -3040,6 +3208,16 @@ show_tabline_popup_menu(void)
     // When ignoring events don't show the menu.
     if (hold_gui_events || cmdwin_type != 0)
 	return;
+
+#if defined(FEAT_WINUI)
+    {
+	POINT	cpt;
+
+	GetCursorPos(&cpt);
+	if (winui_tabline_popup(cpt))
+	    return;
+    }
+#endif
 
     tab_pmenu = CreatePopupMenu();
     if (tab_pmenu == NULL)
@@ -3086,6 +3264,16 @@ show_tabline_popup_menu(void)
     void
 gui_mch_show_tabline(int showit)
 {
+#if defined(FEAT_WINUI)
+    if (s_tabview_active)
+    {
+	if (s_tabhwnd != NULL)
+	    ShowWindow(s_tabhwnd, SW_HIDE);
+	gui.tabline_height = 0;
+	showing_tabline = showit;
+	return;
+    }
+#endif
     if (s_tabhwnd == NULL)
 	return;
 
@@ -3120,6 +3308,38 @@ gui_mch_update_tabline(void)
     int		curtabidx = 0;
     int		tabadded = 0;
     WCHAR	*wstr = NULL;
+
+#if defined(FEAT_WINUI)
+    if (s_tabview_active)
+    {
+	int	n = 0;
+	int	i = 0;
+	int	cur = 0;
+	WCHAR	**labels;
+	tabpage_T *tp2;
+
+	for (tp2 = first_tabpage; tp2 != NULL; tp2 = tp2->tp_next)
+	    ++n;
+	labels = ALLOC_CLEAR_MULT(WCHAR *, n > 0 ? n : 1);
+	if (labels != NULL)
+	{
+	    for (tp2 = first_tabpage; tp2 != NULL; tp2 = tp2->tp_next, ++i)
+	    {
+		if (tp2 == curtab)
+		    cur = i;
+		get_tabline_label(tp2, FALSE);
+		labels[i] = (WCHAR *)enc_to_utf16(NameBuff, NULL);
+	    }
+	    WinUI_TabBarSetItems((const WCHAR **)labels, n, cur);
+	    for (i = 0; i < n; ++i)
+		vim_free(labels[i]);
+	    vim_free(labels);
+	}
+	if (s_tabhwnd != NULL)
+	    ShowWindow(s_tabhwnd, SW_HIDE);
+	return;
+    }
+#endif
 
     if (s_tabhwnd == NULL)
 	return;
@@ -3185,6 +3405,13 @@ gui_mch_update_tabline(void)
     void
 gui_mch_set_curtab(int nr)
 {
+#if defined(FEAT_WINUI)
+    if (s_tabview_active)
+    {
+	WinUI_TabBarSetSelected(nr - 1);
+	return;
+    }
+#endif
     if (s_tabhwnd == NULL)
 	return;
 
@@ -3392,9 +3619,14 @@ set_window_title(HWND hwnd, char *title)
 	(void)SetWindowTextW(hwnd, NULL);
 }
 
+
     void
 gui_mch_find_dialog(exarg_T *eap)
 {
+#if defined(FEAT_WINUI) && defined(MSWIN_FIND_REPLACE)
+    if (winui_show_findbar(eap->arg, FALSE))
+	return;
+#endif
 #ifdef MSWIN_FIND_REPLACE
     if (s_findrep_msg != 0)
     {
@@ -3419,6 +3651,10 @@ gui_mch_find_dialog(exarg_T *eap)
     void
 gui_mch_replace_dialog(exarg_T *eap)
 {
+#if defined(FEAT_WINUI) && defined(MSWIN_FIND_REPLACE)
+    if (winui_show_findbar(eap->arg, TRUE))
+	return;
+#endif
 #ifdef MSWIN_FIND_REPLACE
     if (s_findrep_msg != 0)
     {
@@ -3454,11 +3690,352 @@ gui_mch_mousehide(int hide)
 }
 
 #ifdef FEAT_MENU
+# ifdef FEAT_WINUI
+/*
+ * Put the menus in the WinUI menu bar.
+ */
+    static void
+winui_menubar_fill(void)
+{
+    WinUIMenuItem   *items;
+    int		    count;
+
+    count = winui_make_items(root_menu, get_menu_mode_flag(), TRUE, &items);
+    if (count < 0)
+	return;
+    WinUI_MenuBarSetItems(items, count);
+    winui_free_items(items, count);
+    s_winui_menubar_dirty = FALSE;
+}
+
+/*
+ * Position the WinUI menu bar at the top of the client area, the toolbar
+ * goes below it.  gui.menu_height is set to its height.
+ * When "resize" is TRUE resize the window if the height changed.
+ */
+    static void
+winui_menubar_layout(int resize)
+{
+    int	    width;
+    int	    height;
+    int	    menu_height;
+    RECT    rc;
+
+    if (!s_winui_menubar)
+	return;
+
+    WinUI_MenuBarGetSize(&width, &height);
+    menu_height = gui.menu_is_active ? height : 0;
+    GetClientRect(s_hwnd, &rc);
+    WinUI_MenuBarSetPos(0, winui_titlebar_offset(), rc.right, menu_height);
+    WinUI_MenuBarShow(gui.menu_is_active);
+
+#  ifdef FEAT_TOOLBAR
+    if (vim_strchr(p_go, GO_TOOLBAR) != NULL)
+	winui_position_toolbar();
+#  endif
+    if (menu_height != gui.menu_height)
+    {
+	gui.menu_height = menu_height;
+#  ifdef FEAT_TOOLBAR
+	if (vim_strchr(p_go, GO_TOOLBAR) != NULL)
+	    winui_position_toolbar();
+#  endif
+	if (resize && !gui.starting)
+	    gui_set_shellsize(FALSE, FALSE, RESIZE_VERT);
+    }
+}
+# endif
+
+#if defined(FEAT_WINUI)
+/*
+ * do_in_runtimepath() callback: keep the first match in the buffer.
+ */
+    static void
+winui_find_file_cb(char_u *fname, void *ck)
+{
+    char_u *buf = (char_u *)ck;
+
+    if (buf[0] == NUL && fname != NULL && *fname != NUL)
+	vim_strncpy(buf, fname, MAXPATHL - 1);
+}
+
+/*
+ * Pixels the content is pushed down by the custom title bar, 0 when off.
+ */
+    static int
+winui_titlebar_offset(void)
+{
+    return s_titlebar_active ? s_titlebar_height : 0;
+}
+
+/*
+ * Position the TabView island in the title bar and declare the draggable
+ * region (the strip between the tabs and the caption buttons).
+ */
+    static void
+winui_titlebar_layout(void)
+{
+    RECT    rc;
+    int	    r[4];
+    int	    w;
+
+    if (!s_titlebar_active)
+	return;
+    GetClientRect(s_hwnd, &rc);
+    if (s_tabview_active)
+    {
+	// The island spans the full width so its dark background also fills the
+	// area under the caption buttons (no white sliver); the TabView itself
+	// is inset on the right by s_titlebar_right so the tabs stay clear of
+	// the buttons.  Its own TabStripFooter declares the draggable region,
+	// so we must not set a fixed drag rectangle here.
+	WinUI_TabBarSetPos(0, 0, rc.right, s_titlebar_height, TRUE,
+							    s_titlebar_right);
+	return;
+    }
+    w = rc.right - s_titlebar_left - s_titlebar_right;
+    if (w < 0)
+	w = 0;
+    r[0] = s_titlebar_left;
+    r[1] = 0;
+    r[2] = w;
+    r[3] = s_titlebar_height;
+    WinUI_TitleBarSetDrag(r, 1);
+}
+
+/*
+ * Called by the TabView when the user acts on a tab.
+ */
+    void
+gui_winui_tab_select(int nr)
+{
+    send_tabline_event(nr);
+}
+
+    void
+gui_winui_tab_new(void)
+{
+    send_tabline_menu_event(0, TABLINE_MENU_NEW);
+}
+
+    void
+gui_winui_tab_close(int nr)
+{
+    // Clicking the close button on the last remaining tab closes the
+    // application (Vim refuses to close the only tabpage), going through the
+    // normal close path so modified buffers are still confirmed.
+    if (first_tabpage->tp_next == NULL)
+    {
+	PostMessage(s_hwnd, WM_CLOSE, 0, 0);
+	return;
+    }
+    send_tabline_menu_event(nr, TABLINE_MENU_CLOSE);
+}
+
+/*
+ * Queue an Ex command to run at the next safe point: CTRL-\ CTRL-N forces
+ * Normal mode, then ":cmd<CR>".  Used by the tab context menu actions that
+ * have no dedicated tabline event.
+ */
+    static void
+winui_feed_excmd(char_u *cmd)
+{
+    char_u  buf[64];
+    int	    n = 0;
+
+    buf[n++] = Ctrl_BSL;
+    buf[n++] = Ctrl_N;
+    buf[n++] = ':';
+    while (*cmd != NUL && n < (int)sizeof(buf) - 1)
+	buf[n++] = *cmd++;
+    buf[n++] = CAR;
+    add_to_input_buf(buf, n);
+}
+
+/*
+ * Tab context menu: move tab "nr" one position left / right.
+ */
+    void
+gui_winui_tab_move_left(int nr)
+{
+    send_tabline_event(nr);		// make the clicked tab the current one
+    winui_feed_excmd((char_u *)"tabmove -1");
+}
+
+    void
+gui_winui_tab_move_right(int nr)
+{
+    send_tabline_event(nr);
+    winui_feed_excmd((char_u *)"tabmove +1");
+}
+
+/*
+ * Tab context menu: "Close other tabs" (keep only tab "nr").
+ */
+    void
+gui_winui_tab_close_others(int nr)
+{
+    send_tabline_event(nr);		// make the clicked tab the current one
+    winui_feed_excmd((char_u *)"tabonly");
+}
+
+/*
+ * Tab context menu: "Close tabs to the right" of tab "nr".
+ */
+    void
+gui_winui_tab_close_right(int nr)
+{
+    tabpage_T	*tp;
+    int		total = 0;
+    int		i;
+    char_u	cmd[32];
+
+    for (tp = first_tabpage; tp != NULL; tp = tp->tp_next)
+	++total;
+    // Close tabs nr+1..total by number, highest first so the numbers stay
+    // valid as tabs are removed.
+    for (i = total; i > nr; --i)
+    {
+	vim_snprintf((char *)cmd, sizeof(cmd), "tabclose %d", i);
+	winui_feed_excmd(cmd);
+    }
+}
+
+/*
+ * Put "text" on the Windows clipboard as Unicode text.
+ */
+    static void
+winui_clipboard_set(char_u *text)
+{
+    WCHAR   *w;
+    HGLOBAL hmem;
+
+    if (text == NULL)
+	return;
+    w = (WCHAR *)enc_to_utf16(text, NULL);
+    if (w == NULL)
+	return;
+    hmem = GlobalAlloc(GMEM_MOVEABLE, (wcslen(w) + 1) * sizeof(WCHAR));
+    if (hmem != NULL)
+    {
+	WCHAR *dst = (WCHAR *)GlobalLock(hmem);
+
+	if (dst != NULL)
+	{
+	    wcscpy(dst, w);
+	    GlobalUnlock(hmem);
+	    if (OpenClipboard(s_hwnd))
+	    {
+		EmptyClipboard();
+		if (SetClipboardData(CF_UNICODETEXT, hmem) != NULL)
+		    hmem = NULL;	// the clipboard owns it now
+		CloseClipboard();
+	    }
+	}
+	if (hmem != NULL)
+	    GlobalFree(hmem);
+    }
+    vim_free(w);
+}
+
+/*
+ * Full path of the file shown in tab "nr" (1-based), or NULL for [No Name].
+ */
+    static char_u *
+winui_tab_fname(int nr)
+{
+    tabpage_T	*tp;
+    win_T	*wp;
+    int		i = 1;
+
+    for (tp = first_tabpage; tp != NULL; tp = tp->tp_next, ++i)
+	if (i == nr)
+	{
+	    wp = (tp == curtab) ? curwin : tp->tp_curwin;
+	    if (wp != NULL && wp->w_buffer != NULL)
+		return wp->w_buffer->b_ffname != NULL
+			    ? wp->w_buffer->b_ffname : wp->w_buffer->b_fname;
+	    break;
+	}
+    return NULL;
+}
+
+/*
+ * Tab context menu: TRUE when tab "nr" has a file name (for the "Copy file
+ * name" item's enabled state).
+ */
+    int
+gui_winui_tab_has_file(int nr)
+{
+    char_u *f = winui_tab_fname(nr);
+
+    return (f != NULL && *f != NUL) ? TRUE : FALSE;
+}
+
+/*
+ * Tab context menu: copy tab "nr"'s file name to the clipboard.
+ */
+    void
+gui_winui_tab_copy_name(int nr)
+{
+    char_u *f = winui_tab_fname(nr);
+
+    if (f != NULL && *f != NUL)
+	winui_clipboard_set(f);
+}
+
+/*
+ * Return the window whose status line is at screen cell (row, col), or NULL.
+ */
+    static win_T *
+winui_statusline_win(int row, int col)
+{
+    win_T *wp;
+
+    FOR_ALL_WINDOWS(wp)
+	if (wp->w_status_height > 0
+		&& row == W_WINROW(wp) + wp->w_height
+		&& col >= wp->w_wincol
+		&& col < wp->w_wincol + wp->w_width)
+	    return wp;
+    return NULL;
+}
+
+/*
+ * The user reordered the tabs by dragging; "idx" is the 0-based new position
+ * of the dragged (now current) tab.  Mirror the GTK tabline behaviour.
+ */
+    void
+gui_winui_tab_moved(int idx)
+{
+    if ((tabpage_index(curtab) - 1) < idx)
+	tabpage_move(idx + 1);
+    else
+	tabpage_move(idx);
+}
+
+/*
+ * Open the Windows system menu (Restore/Move/Size/Minimize/Maximize/Close),
+ * like clicking the icon of a classic title bar.
+ */
+    void
+gui_winui_show_sysmenu(void)
+{
+    SendMessage(s_hwnd, WM_SYSCOMMAND, SC_KEYMENU, (LPARAM)' ');
+}
+#endif
+
     static void
 gui_mch_show_popupmenu_at(vimmenu_T *menu, int x, int y)
 {
     // Unhide the mouse, we don't get move events here.
     gui_mch_mousehide(FALSE);
+
+# ifdef FEAT_WINUI
+    if (winui_show_popupmenu(menu, x, y))
+	return;
+# endif
 
     (void)TrackPopupMenu(
 	(HMENU)menu->submenu_id,
@@ -3554,6 +4131,9 @@ _OnSize(
 {
     if (!IsMinimized(hwnd) && !s_in_dpichanged)
     {
+#if defined(FEAT_WINUI)
+	cy -= winui_titlebar_offset();
+#endif
 	gui_resize_shell(cx, cy);
 
 	// Menu bar may wrap differently now
@@ -3858,6 +4438,9 @@ gui_mch_exit(int rc UNUSED)
     DWriteContext_Close(s_dwc);
     DWrite_Final();
     s_dwc = NULL;
+#endif
+#if defined(FEAT_WINUI) && defined(FEAT_MENU)
+    WinUI_Final();
 #endif
 
     ReleaseDC(s_textArea, s_hdc);
@@ -4205,7 +4788,7 @@ gui_mch_settitle(
     char_u  *title,
     char_u  *icon UNUSED)
 {
-    set_window_title(s_hwnd, (title == NULL ? "VIM" : (char *)title));
+    set_window_title(s_hwnd, (title == NULL ? "JoliVIM" : (char *)title));
 }
 
 #if defined(FEAT_MOUSESHAPE)
@@ -4263,7 +4846,7 @@ mch_set_mouse_shape(int shape)
 /*
  * Wide version of convert_filter().
  */
-    static WCHAR *
+    WCHAR *
 convert_filterW(char_u *s)
 {
     char_u *tmp;
@@ -4289,6 +4872,7 @@ convert_filterW(char_u *s)
  *  initdir - directory in which to open the browser (NULL = current dir)
  *  filter  - Filter for matched files to choose from.
  */
+
     char_u *
 gui_mch_browse(
 	int saving,
@@ -4310,6 +4894,16 @@ gui_mch_browse(
     WCHAR		*filterp;
     char_u		*p, *q;
     BOOL		ret;
+
+#if defined(FEAT_WINUI)
+    {
+	int	ok = FALSE;
+	char_u	*r = winui_browse(saving, title, dflt, ext, initdir, filter,
+									&ok);
+	if (ok)
+	    return r;
+    }
+#endif
 
     if (dflt == NULL)
 	fileBuf[0] = NUL;
@@ -4750,6 +5344,11 @@ gui_mswin_get_menu_height(
     int	    num;
     int	    menu_height;
 
+# ifdef FEAT_WINUI
+    // The WinUI menu bar is in the client area, gui.menu_height is used.
+    if (s_winui_menubar)
+	return 0;
+# endif
     if (gui.menu_is_active)
 	num = GetMenuItemCount(s_menuBar);
     else
@@ -4956,6 +5555,10 @@ set_tabline_font(void)
      * and the tab border is included as 7.
      */
     gui.tabline_height = tm.tmHeight + tm.tmInternalLeading + 7;
+#if defined(FEAT_WINUI)
+    if (s_tabview_active)
+	gui.tabline_height = 0;
+#endif
 }
 #else
 # define set_tabline_font()
@@ -5268,6 +5871,54 @@ _OnNotify(HWND hwnd, UINT id, NMHDR *hdr)
 	    break;
 # endif
 
+# if defined(FEAT_WINUI) && defined(FEAT_TOOLBAR)
+	case NM_CUSTOMDRAW:
+	    // Paint the toolbar with the selected-tab colour so the active tab
+	    // extends into it; the glyphs come from the image list.
+	    if (s_toolbarhwnd != NULL && hdr->hwndFrom == s_toolbarhwnd
+						    && s_titlebar_active)
+	    {
+		NMTBCUSTOMDRAW	*cd = (NMTBCUSTOMDRAW *)hdr;
+		int		dark = winui_is_dark_mode();
+		COLORREF	bg = dark ? RGB(0x2B, 0x2B, 0x2B)
+					  : RGB(0xF8, 0xF8, 0xF8);
+		COLORREF	hot = dark ? RGB(0x3D, 0x3D, 0x3D)
+					   : RGB(0xEA, 0xEA, 0xEA);
+		COLORREF	sel = dark ? RGB(0x45, 0x45, 0x45)
+					   : RGB(0xDE, 0xDE, 0xDE);
+
+		switch (cd->nmcd.dwDrawStage)
+		{
+		    case CDDS_PREPAINT:
+			{
+			    HBRUSH	br = CreateSolidBrush(bg);
+
+			    FillRect(cd->nmcd.hdc, &cd->nmcd.rc, br);
+			    DeleteObject(br);
+			}
+			return CDRF_NOTIFYITEMDRAW;
+
+		    case CDDS_ITEMPREPAINT:
+			// Suppress the themed button background and draw our own
+			// subtle hover/pressed fill; the glyph is still drawn by
+			// the default handler on top.
+			if (cd->nmcd.uItemState & (CDIS_HOT | CDIS_SELECTED))
+			{
+			    HBRUSH	br = CreateSolidBrush(
+				    (cd->nmcd.uItemState & CDIS_SELECTED)
+							? sel : hot);
+
+			    FillRect(cd->nmcd.hdc, &cd->nmcd.rc, br);
+			    DeleteObject(br);
+			}
+			cd->clrText = dark ? RGB(0xEA, 0xEF, 0xEC)
+					   : RGB(0x1F, 0x2A, 0x25);
+			return CDRF_DODEFAULT | TBCDRF_NOBACKGROUND;
+		}
+	    }
+	    break;
+# endif
+
 	default:
 	    break;
     }
@@ -5357,6 +6008,11 @@ _OnDpiChanged(HWND hwnd, UINT xdpi UNUSED, UINT ydpi, RECT *rc)
     s_dpi = ydpi;
     s_in_dpichanged = TRUE;
     //TRACE("DPI: %d", ydpi);
+#if defined(FEAT_WINUI)
+    if (s_titlebar_active)
+	WinUI_TitleBarGetMetrics(&s_titlebar_height, &s_titlebar_left,
+							    &s_titlebar_right);
+#endif
 
     s_suggested_rect = *rc;
     //TRACE("Suggested pos&size: %d,%d %d,%d", rc->left, rc->top,
@@ -5466,6 +6122,21 @@ _WndProc(
 	    return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 #endif
 
+#if defined(FEAT_WINUI) && defined(FEAT_MENU)
+    case WM_SYSCOMMAND:
+	// Alt-key, Alt and F10 open the WinUI menu bar.  A space is for the
+	// system menu.
+	if (s_winui_menubar && gui.menu_is_active
+		&& (wParam & 0xFFF0) == SC_KEYMENU && lParam != ' '
+		&& WinUI_MenuBarOpen((int)lParam))
+	    return 0L;
+	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+
+    case WM_WINUI_LAYOUT:
+	winui_menubar_layout(TRUE);
+	return 0L;
+#endif
+
     case WM_SYSKEYUP:
 #ifdef FEAT_MENU
 	// This used to be done only when menu is active: ALT key is used for
@@ -5491,6 +6162,30 @@ _WndProc(
 
 	// Notification for change in SystemParametersInfo()
     case WM_SETTINGCHANGE:
+#if defined(FEAT_WINUI)
+	// A light/dark theme switch arrives as WM_SETTINGCHANGE with
+	// lParam == "ImmersiveColorSet"; re-colour the title bar and tabs.
+	if (s_titlebar_active && lParam != 0
+		&& wcscmp((WCHAR *)lParam, L"ImmersiveColorSet") == 0)
+	{
+	    // Window frame and menus first, then re-apply our caption-button/
+	    // tab colours so they win over the frame re-theming.
+	    gui_mch_set_dark_theme(winui_is_dark_mode());
+	    SetWindowPos(s_hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE
+			    | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+	    WinUI_UpdateTheme();
+	    gui_mch_update_tabline();
+# ifdef FEAT_TOOLBAR
+	    // Re-render the toolbar glyphs in the new colour and repaint the
+	    // (custom-drawn) toolbar background.
+	    if (s_toolbarhwnd != NULL && create_toolbar_glyph_imagelists())
+	    {
+		set_toolbar_imagelists();
+		InvalidateRect(s_toolbarhwnd, NULL, TRUE);
+	    }
+# endif
+	}
+#endif
 	return _OnSettingChange((UINT)wParam);
 
 #if defined(FEAT_TOOLBAR) || defined(FEAT_GUI_TABLINE)
@@ -5623,11 +6318,11 @@ gui_mch_do_spawn(char_u *arg)
     p = wcsrchr(name, L'\\');
     if (p == NULL)
 	goto error;
-    // Replace the executable name from vim(d).exe to gvim(d).exe.
+    // Replace the executable name from vim(d).exe to jvim(d).exe.
 # ifdef DEBUG
-    wcscpy(p + 1, L"gvimd.exe");
+    wcscpy(p + 1, L"jvimd.exe");
 # else
-    wcscpy(p + 1, L"gvim.exe");
+    wcscpy(p + 1, L"jvim.exe");
 # endif
 
 # if defined(FEAT_SESSION) && defined(EXPERIMENTAL_GUI_CMD)
@@ -6000,6 +6695,56 @@ gui_mch_init(void)
 	//TRACE("System DPI: %d, DPI: %d", pGetDpiForSystem(), s_dpi);
     }
 
+#if defined(FEAT_WINUI)
+    // Custom title bar with the tabs shown in it (like Notepad).
+    if (WinUI_TitleBarInit(s_hwnd, &s_titlebar_height,
+					&s_titlebar_left, &s_titlebar_right))
+    {
+	char_u	imgbuf[MAXPATHL];
+	WCHAR	*wimg = NULL;
+
+	s_titlebar_active = TRUE;
+	imgbuf[0] = NUL;
+	(void)do_in_runtimepath((char_u *)"joli.png", 0,
+						winui_find_file_cb, imgbuf);
+	if (imgbuf[0] != NUL)
+	    wimg = (WCHAR *)enc_to_utf16(imgbuf, NULL);
+	if (WinUI_TabBarInit(s_hwnd, wimg))
+	    s_tabview_active = TRUE;
+	vim_free(wimg);
+	if (s_tabview_active)
+	{
+	    // Labels for the per-tab context menu.
+	    WCHAR *l1 = (WCHAR *)enc_to_utf16((char_u *)_("New tab"), NULL);
+	    WCHAR *l2 = (WCHAR *)enc_to_utf16((char_u *)_("Close tab"), NULL);
+	    WCHAR *l3 = (WCHAR *)enc_to_utf16(
+					(char_u *)_("Close other tabs"), NULL);
+	    WCHAR *l4 = (WCHAR *)enc_to_utf16(
+				    (char_u *)_("Close tabs to the right"), NULL);
+	    WCHAR *l5 = (WCHAR *)enc_to_utf16(
+					(char_u *)_("Copy file name"), NULL);
+	    WCHAR *l6 = (WCHAR *)enc_to_utf16((char_u *)_("Move left"), NULL);
+	    WCHAR *l7 = (WCHAR *)enc_to_utf16((char_u *)_("Move right"), NULL);
+
+	    WinUI_TabBarSetMenuLabels(l1, l2, l3, l4, l5, l6, l7);
+	    vim_free(l1);
+	    vim_free(l2);
+	    vim_free(l3);
+	    vim_free(l4);
+	    vim_free(l5);
+	    vim_free(l6);
+	    vim_free(l7);
+	}
+	// Follow the system theme for the window frame, scroll bars and menus
+	// (reuses Vim's dark-theme machinery), then force the non-client area
+	// (caption buttons) to repaint with the new theme.
+	gui_mch_set_dark_theme(winui_is_dark_mode());
+	SetWindowPos(s_hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE
+			| SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+	WinUI_UpdateTheme();
+    }
+#endif
+
 #if defined(FEAT_MBYTE_IME) && defined(DYNAMIC_IME)
     dyn_imm_load();
 #endif
@@ -6035,7 +6780,7 @@ gui_mch_init(void)
 	return FAIL;
 
 #ifdef FEAT_LIBCALL
-    // Try loading an icon from $RUNTIMEPATH/bitmaps/vim.ico.
+    // Try loading an icon from $RUNTIMEPATH/bitmaps/joli.ico.
     {
 	HANDLE	hIcon = NULL;
 
@@ -6197,7 +6942,12 @@ gui_mch_set_shellsize(
 		     pGetSystemMetricsForDpi(SM_CXPADDEDBORDER, s_dpi)) * 2;
     win_height = height + (pGetSystemMetricsForDpi(SM_CYFRAME, s_dpi) +
 		       pGetSystemMetricsForDpi(SM_CXPADDEDBORDER, s_dpi)) * 2
+#if defined(FEAT_WINUI)
+			+ (s_titlebar_active ? s_titlebar_height
+			    : pGetSystemMetricsForDpi(SM_CYCAPTION, s_dpi))
+#else
 			+ pGetSystemMetricsForDpi(SM_CYCAPTION, s_dpi)
+#endif
 			+ gui_mswin_get_menu_height(FALSE);
 
     // The following should take care of keeping Vim on the same monitor, no
@@ -7075,6 +7825,9 @@ gui_mch_add_menu(
 {
     vimmenu_T	*parent = menu->parent;
 
+# ifdef FEAT_WINUI
+    s_winui_menubar_dirty = TRUE;
+# endif
     menu->submenu_id = CreatePopupMenu();
     menu->id = s_menu_id++;
 
@@ -7175,6 +7928,9 @@ gui_mch_add_menu_item(
 {
     vimmenu_T	*parent = menu->parent;
 
+# ifdef FEAT_WINUI
+    s_winui_menubar_dirty = TRUE;
+# endif
     menu->id = s_menu_id++;
     menu->submenu_id = NULL;
 
@@ -7236,6 +7992,9 @@ gui_mch_add_menu_item(
     void
 gui_mch_destroy_menu(vimmenu_T *menu)
 {
+# ifdef FEAT_WINUI
+    s_winui_menubar_dirty = TRUE;
+# endif
 # ifdef FEAT_TOOLBAR
     /*
      * is this a toolbar button?
@@ -7331,8 +8090,14 @@ gui_mch_menu_grey(
 		(WPARAM)menu->id, (LPARAM) MAKELONG((grey ? FALSE : TRUE), 0));
     else
 # endif
+    {
 	(void)EnableMenuItem(menu->parent ? menu->parent->submenu_id : s_menuBar,
 		menu->id, MF_BYCOMMAND | (grey ? MF_GRAYED : MF_ENABLED));
+# ifdef FEAT_WINUI
+	if (s_winui_menubar)
+	    WinUI_MenuBarSetEnabled(menu->id, !grey);
+# endif
+    }
 
 # ifdef FEAT_TEAROFF
     if ((menu->parent != NULL) && (IsWindow(menu->parent->tearoff_handle)))
@@ -7469,6 +8234,7 @@ static const char *dlg_icons[] = // must match names in resource file
     "IDR_VIM_QUESTION"
 };
 
+
     int
 gui_mch_dialog(
     int		 type,
@@ -7538,6 +8304,18 @@ gui_mch_dialog(
 
     if ((type < 0) || (type > VIM_LAST_TYPE))
 	type = 0;
+
+#if defined(FEAT_WINUI)
+    // Use a modern WinUI dialog.  Only falls back to the Win32 dialog when
+    // WinUI itself is unavailable (then a non-WinUI build should be used).
+    if (s_hwnd != NULL)
+    {
+	int r = winui_dialog(title, message, buttons, dfltbutton, textfield);
+
+	if (r >= 0)
+	    return r;
+    }
+#endif
 
     // allocate some memory for dialog template
     // TODO should compute this really
@@ -8520,6 +9298,430 @@ gui_mch_tearoff(
 #if defined(FEAT_TOOLBAR)
 # include "gui_w32_rc.h"
 
+# ifdef FEAT_WINUI
+/*
+ * Glyphs of the "Segoe Fluent Icons" font (Windows 11), also present in
+ * "Segoe MDL2 Assets" (Windows 10), used for the builtin toolbar images.  In
+ * the order of toolbar_names[] in menu.c.
+ */
+static const WCHAR toolbar_glyphs[] = {
+    0xE7C3,	// New: Page
+    0xE838,	// Open: FolderOpen
+    0xE74E,	// Save: Save
+    0xE7A7,	// Undo: Undo
+    0xE7A6,	// Redo: Redo
+    0xE8C6,	// Cut: Cut
+    0xE8C8,	// Copy: Copy
+    0xE77F,	// Paste: Paste
+    0xE749,	// Print: Print
+    0xE897,	// Help: Help
+    0xE721,	// Find: Search
+    0xEA35,	// SaveAll: SaveCopy
+    0xE792,	// SaveSesn: SaveAs
+    0xE710,	// NewSesn: Add
+    0xE81C,	// LoadSesn: History
+    0xE943,	// RunScript: Code
+    0xE8AC,	// Replace: Rename
+    0xE8BB,	// WinClose: ChromeClose
+    0xE922,	// WinMax: ChromeMaximize
+    0xE921,	// WinMin: ChromeMinimize
+    0xE90E,	// WinSplit: DockBottom
+    0xE756,	// Shell: CommandPrompt
+    0xE74A,	// FindPrev: Up
+    0xE74B,	// FindNext: Down
+    0xE8F1,	// FindHelp: Library
+    0xE90F,	// Make: Repair
+    0xE8AD,	// TagJump: Go
+    0xE8EC,	// RunCtags: Tag
+    0xE90D,	// WinVSplit: DockRight
+    0xE741,	// WinMaxWidth: ResizeTouchLarger
+    0xE742,	// WinMinWidth: ResizeTouchSmaller
+    0xE7E8,	// Exit: PowerButton
+};
+#  define TOOLBAR_GLYPH_COUNT	((int)ARRAY_LENGTH(toolbar_glyphs))
+#  define TOOLBAR_GLYPH_SIZE	16	// size in pixels at 96 DPI
+
+
+    static int CALLBACK
+font_exists_proc(
+    const LOGFONTW	*lf UNUSED,
+    const TEXTMETRICW	*tm UNUSED,
+    DWORD		type UNUSED,
+    LPARAM		lParam)
+{
+    *(int *)lParam = TRUE;
+    return 0;
+}
+
+/*
+ * Return the name of the installed icon font, NULL if there is none.
+ */
+    static const WCHAR *
+get_icon_font_face(void)
+{
+    static const WCHAR *faces[] = {L"Segoe Fluent Icons", L"Segoe MDL2 Assets"};
+    HDC		hdc;
+    LOGFONTW	lf;
+    int		found = FALSE;
+    int		i;
+
+    hdc = GetDC(NULL);
+    for (i = 0; i < (int)ARRAY_LENGTH(faces) && !found; ++i)
+    {
+	vim_memset(&lf, 0, sizeof(lf));
+	lf.lfCharSet = DEFAULT_CHARSET;
+	lstrcpynW(lf.lfFaceName, faces[i], LF_FACESIZE);
+	EnumFontFamiliesExW(hdc, &lf, font_exists_proc, (LPARAM)&found, 0);
+    }
+    ReleaseDC(NULL, hdc);
+    return found ? faces[i - 1] : NULL;
+}
+
+/*
+ * Create a 32 bit "size" x "size" bitmap for the toolbar image list.
+ * "bitsp" is set to the pixels.
+ */
+    static HBITMAP
+create_toolbar_dib(HDC hdc, int size, DWORD **bitsp)
+{
+    BITMAPINFO	bmi;
+
+    vim_memset(&bmi, 0, sizeof(bmi));
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = size;
+    bmi.bmiHeader.biHeight = -size;	// top-down
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+    return CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, (void **)bitsp,
+								    NULL, 0);
+}
+
+/*
+ * Create an image list with the toolbar glyphs of font "face", drawn in
+ * "color" with "size" x "size" pixels.
+ */
+    static HIMAGELIST
+create_glyph_imagelist(const WCHAR *face, int size, COLORREF color)
+{
+    HIMAGELIST	himl;
+    HDC		hdc;
+    HFONT	hfont;
+    HFONT	hfont_old;
+    HBITMAP	hbm;
+    HBITMAP	hbm_old;
+    DWORD	*bits;
+    RECT	rc = {0, 0, size, size};
+    int		i;
+    int		p;
+
+    himl = ImageList_Create(size, size, ILC_COLOR32, TOOLBAR_GLYPH_COUNT, 8);
+    if (himl == NULL)
+	return NULL;
+    hdc = CreateCompatibleDC(NULL);
+    hfont = CreateFontW(-size, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+	    DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+	    ANTIALIASED_QUALITY, DEFAULT_PITCH, face);
+    hfont_old = (HFONT)SelectObject(hdc, hfont);
+    SetBkMode(hdc, TRANSPARENT);
+    SetTextColor(hdc, RGB(255, 255, 255));
+
+    for (i = 0; i < TOOLBAR_GLYPH_COUNT; ++i)
+    {
+	hbm = create_toolbar_dib(hdc, size, &bits);
+	if (hbm == NULL)
+	    break;
+	hbm_old = (HBITMAP)SelectObject(hdc, hbm);
+	vim_memset(bits, 0, (size_t)size * size * sizeof(DWORD));
+	DrawTextW(hdc, &toolbar_glyphs[i], 1, &rc,
+			    DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+	GdiFlush();
+
+	// GDI doesn't set the alpha channel: the glyph is drawn white on
+	// black, use its intensity as alpha, with premultiplied colors.
+	for (p = 0; p < size * size; ++p)
+	{
+	    DWORD a = (bits[p] >> 8) & 0xff;
+
+	    bits[p] = (a << 24)
+		| ((GetRValue(color) * a / 255) << 16)
+		| ((GetGValue(color) * a / 255) << 8)
+		| (GetBValue(color) * a / 255);
+	}
+	SelectObject(hdc, hbm_old);
+	ImageList_Add(himl, hbm, NULL);
+	DeleteObject(hbm);
+    }
+
+    SelectObject(hdc, hfont_old);
+    DeleteObject(hfont);
+    DeleteDC(hdc);
+    if (i < TOOLBAR_GLYPH_COUNT)
+    {
+	ImageList_Destroy(himl);
+	return NULL;
+    }
+    return himl;
+}
+
+/*
+ * Create the image lists with the glyphs of the Windows icon font for the
+ * builtin toolbar images, scaled for the current DPI.
+ * Returns FALSE when the font is not installed or something failed, the
+ * classic bitmaps are used then.
+ */
+/*
+ * Return TRUE when the toolbar should use the Windows 11 glyph icons, FALSE
+ * to use the classic bitmaps.  Controlled by 'toolbariconstyle'.
+ */
+    static int
+winui_want_glyphs(void)
+{
+    // "classic" forces the old bitmaps; "win11" and "auto" (the default)
+    // use the glyphs, falling back to the bitmaps when the font is missing.
+    if (p_tbst != NULL && STRCMP(p_tbst, (char_u *)"classic") == 0)
+	return FALSE;
+    return TRUE;
+}
+
+    static int
+create_toolbar_glyph_imagelists(void)
+{
+    static const WCHAR	*face = NULL;
+    static int		face_checked = FALSE;
+
+    if (!winui_want_glyphs())
+	return FALSE;
+    HIMAGELIST		himl;
+    HIMAGELIST		himl_disabled;
+    int			size;
+
+    if (!face_checked)
+    {
+	face = get_icon_font_face();
+	face_checked = TRUE;
+	OutputDebugStringW(face != NULL ? L"vim: toolbar icon font: "
+				: L"vim: no toolbar icon font, using bitmaps");
+	if (face != NULL)
+	    OutputDebugStringW(face);
+	OutputDebugStringW(L"\n");
+    }
+    if (face == NULL)
+	return FALSE;
+
+    size = TOOLBAR_GLYPH_SIZE * s_dpi / DEFAULT_DPI;
+#if defined(FEAT_WINUI)
+    if (winui_is_dark_mode())
+    {
+	// Light glyphs on the dark chrome.
+	himl = create_glyph_imagelist(face, size, RGB(0xEA, 0xEF, 0xEC));
+	himl_disabled = create_glyph_imagelist(face, size,
+						RGB(0x80, 0x80, 0x80));
+    }
+    else
+#endif
+    {
+	himl = create_glyph_imagelist(face, size, GetSysColor(COLOR_BTNTEXT));
+	himl_disabled = create_glyph_imagelist(face, size,
+						GetSysColor(COLOR_GRAYTEXT));
+    }
+    if (himl == NULL || himl_disabled == NULL)
+    {
+	if (himl != NULL)
+	    ImageList_Destroy(himl);
+	if (himl_disabled != NULL)
+	    ImageList_Destroy(himl_disabled);
+	return FALSE;
+    }
+
+    if (s_toolbar_imagelist != NULL)
+	ImageList_Destroy(s_toolbar_imagelist);
+    if (s_toolbar_disabled_imagelist != NULL)
+	ImageList_Destroy(s_toolbar_disabled_imagelist);
+    s_toolbar_imagelist = himl;
+    s_toolbar_disabled_imagelist = himl_disabled;
+    s_toolbar_imagelist_dpi = s_dpi;
+    return TRUE;
+}
+
+/*
+ * Give the toolbar the image lists with the glyphs.
+ */
+    static void
+set_toolbar_imagelists(void)
+{
+    SendMessage(s_toolbarhwnd, TB_SETIMAGELIST, 0,
+						(LPARAM)s_toolbar_imagelist);
+    SendMessage(s_toolbarhwnd, TB_SETDISABLEDIMAGELIST, 0,
+					(LPARAM)s_toolbar_disabled_imagelist);
+}
+
+/*
+ * Recreate the glyph images when the DPI changed.  The images of the buttons
+ * are set again, to add the bitmaps from "icon=" to the new lists.
+ */
+    static void
+update_toolbar_glyph_images(void)
+{
+    HIMAGELIST	himl = s_toolbar_imagelist;
+    HIMAGELIST	himl_disabled = s_toolbar_disabled_imagelist;
+    vimmenu_T	*menu;
+    vimmenu_T	*item;
+
+    // Not using glyphs or DPI didn't change.
+    if (himl == NULL || s_toolbar_imagelist_dpi == s_dpi)
+	return;
+
+    // Keep the old lists while the toolbar uses them.
+    s_toolbar_imagelist = NULL;
+    s_toolbar_disabled_imagelist = NULL;
+    if (!create_toolbar_glyph_imagelists())
+    {
+	s_toolbar_imagelist = himl;
+	s_toolbar_disabled_imagelist = himl_disabled;
+	return;
+    }
+    set_toolbar_imagelists();
+
+    FOR_ALL_MENUS(menu)
+	if (menu_is_toolbar(menu->name))
+	    for (item = menu->children; item != NULL; item = item->next)
+		if (!menu_is_separator(item->name))
+		    SendMessage(s_toolbarhwnd, TB_CHANGEBITMAP,
+			    (WPARAM)item->id,
+			    MAKELPARAM(get_toolbar_bitmap(item), 0));
+
+    ImageList_Destroy(himl);
+    ImageList_Destroy(himl_disabled);
+    InvalidateRect(s_toolbarhwnd, NULL, TRUE);
+}
+
+/*
+ * Add bitmap file "fname" to the glyph image lists.  Pixels with the button
+ * face color are made transparent.
+ * Returns the index of the image, -1 when it fails.
+ */
+    static int
+add_toolbar_bitmap_file(char_u *fname)
+{
+    HBITMAP	hbm_file;
+    HBITMAP	hbm;
+    HBITMAP	hbm_old;
+    HBITMAP	hbm_file_old;
+    HDC		hdc;
+    HDC		hdc_file;
+    DWORD	*bits;
+    DWORD	face_color;
+    COLORREF	c;
+    int		size;
+    int		p;
+    int		i = -1;
+
+    ImageList_GetIconSize(s_toolbar_imagelist, &size, &p);
+    hbm_file = (HBITMAP)LoadImage(NULL, (LPCSTR)fname, IMAGE_BITMAP,
+		    size, size, LR_LOADFROMFILE | LR_LOADMAP3DCOLORS);
+    if (hbm_file == NULL)
+	return -1;
+
+    hdc = CreateCompatibleDC(NULL);
+    hdc_file = CreateCompatibleDC(NULL);
+    hbm = create_toolbar_dib(hdc, size, &bits);
+    if (hbm != NULL)
+    {
+	hbm_old = (HBITMAP)SelectObject(hdc, hbm);
+	hbm_file_old = (HBITMAP)SelectObject(hdc_file, hbm_file);
+	BitBlt(hdc, 0, 0, size, size, hdc_file, 0, 0, SRCCOPY);
+	GdiFlush();
+	SelectObject(hdc_file, hbm_file_old);
+	SelectObject(hdc, hbm_old);
+
+	c = GetSysColor(COLOR_BTNFACE);
+	face_color = ((DWORD)GetRValue(c) << 16) | ((DWORD)GetGValue(c) << 8)
+							    | GetBValue(c);
+	for (p = 0; p < size * size; ++p)
+	    bits[p] = (bits[p] & 0xffffff) == face_color
+					    ? 0 : (bits[p] | 0xff000000);
+
+	// Add to both lists to keep the indexes the same.
+	i = ImageList_Add(s_toolbar_imagelist, hbm, NULL);
+	if (i >= 0)
+	{
+	    ImageList_Add(s_toolbar_disabled_imagelist, hbm, NULL);
+	    // The toolbar doesn't notice images added to its list, set it
+	    // again.
+	    set_toolbar_imagelists();
+	}
+	DeleteObject(hbm);
+    }
+    DeleteDC(hdc_file);
+    DeleteDC(hdc);
+    DeleteObject(hbm_file);
+    return i;
+}
+
+/*
+ * get_toolbar_bitmap() when using the glyph images ('toolbariconstyle' is
+ * "win11" or "auto").  A bitmap given explicitly with the "icon=" argument
+ * always wins.  For a "bitmaps/{name}.bmp" file found in 'runtimepath':
+ * - "auto" uses it when present, so a user-provided bitmap wins over the glyph;
+ * - "win11" uses it only for a button that has no glyph (a custom button),
+ *   so the Windows 11 glyph is always shown for the standard buttons.
+ * Otherwise the glyph is used.
+ */
+    static int
+get_toolbar_glyph_index(vimmenu_T *menu)
+{
+    char_u  fname[MAXPATHL];
+    int	    has_glyph = menu->iconidx >= 0
+				    && menu->iconidx < TOOLBAR_GLYPH_COUNT;
+    // "win11" prefers the glyph, "auto" prefers a user-provided bitmap.
+    int	    prefer_user_bitmap = !(p_tbst != NULL
+				    && STRCMP(p_tbst, (char_u *)"win11") == 0);
+    int	    i = -1;
+
+    if (!menu->icon_builtin)
+    {
+	if (menu->iconfile != NULL)
+	{
+	    gui_find_iconfile(menu->iconfile, fname, "bmp");
+	    i = add_toolbar_bitmap_file(fname);
+	}
+	if (i == -1 && (prefer_user_bitmap || !has_glyph) && gui_find_bitmap(
+#  ifdef FEAT_MULTI_LANG
+			    menu->en_dname != NULL ? menu->en_dname :
+#  endif
+					menu->dname, fname, "bmp") == OK)
+	    i = add_toolbar_bitmap_file(fname);
+    }
+    if (i == -1 && has_glyph)
+	i = menu->iconidx;
+    return i;
+}
+# endif
+
+# ifdef FEAT_WINUI
+/*
+ * Position the toolbar, it doesn't align itself: at the top, or below the
+ * WinUI menu bar.
+ */
+    static void
+winui_position_toolbar(void)
+{
+    RECT    rc;
+    int	    y = 0;
+
+    if (s_toolbarhwnd == NULL)
+	return;
+#  ifdef FEAT_MENU
+    if (s_winui_menubar && gui.menu_is_active)
+	y = gui.menu_height;
+#  endif
+    y += winui_titlebar_offset();
+    GetClientRect(s_hwnd, &rc);
+    MoveWindow(s_toolbarhwnd, 0, y, rc.right, gui.toolbar_height, TRUE);
+}
+# endif
+
 /*
  * Create the toolbar, initially unpopulated.
  *  (just like the menu, there are no defaults, it's all
@@ -8529,9 +9731,28 @@ gui_mch_tearoff(
 initialise_toolbar(void)
 {
     InitCommonControls();
+# ifdef FEAT_WINUI
+    // With the glyph images the toolbar must not get the bitmap, otherwise
+    // it ignores the image lists.
+    if (create_toolbar_glyph_imagelists())
+    {
+	s_toolbarhwnd = CreateWindowEx(0, TOOLBARCLASSNAME, NULL,
+		WS_CHILD | TBSTYLE_TOOLTIPS | TBSTYLE_FLAT
+			    | CCS_NOPARENTALIGN | CCS_NORESIZE | CCS_NODIVIDER,
+		0, 0, 0, 0, s_hwnd, (HMENU)4000, g_hinst, NULL);
+	SendMessage(s_toolbarhwnd, TB_BUTTONSTRUCTSIZE,
+						    (WPARAM)sizeof(TBBUTTON), 0);
+	set_toolbar_imagelists();
+    }
+    else
+# endif
     s_toolbarhwnd = CreateToolbarEx(
 		    s_hwnd,
-		    WS_CHILD | TBSTYLE_TOOLTIPS | TBSTYLE_FLAT,
+		    WS_CHILD | TBSTYLE_TOOLTIPS | TBSTYLE_FLAT
+# ifdef FEAT_WINUI
+			    | CCS_NOPARENTALIGN | CCS_NORESIZE | CCS_NODIVIDER
+# endif
+		    ,
 		    4000,		//any old big number
 		    31,			//number of images in initial bitmap
 		    g_hinst,
@@ -8557,11 +9778,95 @@ initialise_toolbar(void)
     update_toolbar_size();
 }
 
+# ifdef FEAT_WINUI
+/*
+ * Rebuild the toolbar after 'toolbariconstyle' changed: recreate it (which
+ * picks the glyph or classic icons) and re-insert the buttons, keeping their
+ * command ids.
+ */
+    void
+gui_mch_toolbar_reload(void)
+{
+    vimmenu_T	*top;
+    vimmenu_T	*item;
+    int		ins;
+
+    if (s_toolbarhwnd == NULL)
+	return;
+
+    // Remove the old toolbar and its image lists.
+    DestroyWindow(s_toolbarhwnd);
+    s_toolbarhwnd = NULL;
+    s_toolbar_wndproc = NULL;
+    if (s_toolbar_imagelist != NULL)
+    {
+	ImageList_Destroy(s_toolbar_imagelist);
+	s_toolbar_imagelist = NULL;
+    }
+    if (s_toolbar_disabled_imagelist != NULL)
+    {
+	ImageList_Destroy(s_toolbar_disabled_imagelist);
+	s_toolbar_disabled_imagelist = NULL;
+    }
+    s_toolbar_imagelist_dpi = 0;
+
+    // Recreate it using the current 'toolbariconstyle'.
+    initialise_toolbar();
+
+    // Re-insert the buttons with their existing command ids.
+    FOR_ALL_MENUS(top)
+    {
+	if (!menu_is_toolbar(top->name))
+	    continue;
+	ins = 0;
+	for (item = top->children; item != NULL; item = item->next)
+	{
+	    TBBUTTON	newtb;
+
+	    if ((item->modes & MENU_ALL_MODES) == 0)
+		continue;
+	    CLEAR_FIELD(newtb);
+	    if (menu_is_separator(item->name))
+	    {
+		newtb.iBitmap = 0;
+		newtb.fsStyle = TBSTYLE_SEP;
+	    }
+	    else
+	    {
+		newtb.iBitmap = get_toolbar_bitmap(item);
+		newtb.fsStyle = TBSTYLE_BUTTON;
+	    }
+	    newtb.idCommand = item->id;
+	    newtb.fsState = TBSTATE_ENABLED;
+	    newtb.iString = 0;
+	    SendMessage(s_toolbarhwnd, TB_INSERTBUTTON, (WPARAM)ins,
+							    (LPARAM)&newtb);
+	    item->submenu_id = (HMENU)-1;
+	    ++ins;
+	}
+    }
+
+    update_toolbar_size();
+#  ifdef FEAT_MENU
+    if (s_winui_menubar)
+	winui_menubar_layout(FALSE);
+#  endif
+    // Reapply the grey state of the buttons.
+    force_menu_update = TRUE;
+    gui_update_menus(0);
+    InvalidateRect(s_hwnd, NULL, TRUE);
+}
+# endif
+
     static void
 update_toolbar_size(void)
 {
     int		w, h;
     TBMETRICS	tbm;
+
+# ifdef FEAT_WINUI
+    update_toolbar_glyph_images();
+# endif
 
     tbm.cbSize = sizeof(TBMETRICS);
     tbm.dwMask = TBMF_PAD | TBMF_BUTTONSPACING;
@@ -8598,6 +9903,11 @@ toolbar_wndproc(
 get_toolbar_bitmap(vimmenu_T *menu)
 {
     int i = -1;
+
+# ifdef FEAT_WINUI
+    if (s_toolbar_imagelist != NULL)
+	return get_toolbar_glyph_index(menu);
+# endif
 
     /*
      * Check user bitmaps first, unless builtin is specified.
@@ -8673,6 +9983,10 @@ initialise_tabline(void)
     s_tabline_wndproc = SubclassWindow(s_tabhwnd, tabline_wndproc);
 
     gui.tabline_height = TABLINE_HEIGHT;
+#if defined(FEAT_WINUI)
+    if (s_tabview_active)
+	gui.tabline_height = 0;
+#endif
 
     set_tabline_font();
 }

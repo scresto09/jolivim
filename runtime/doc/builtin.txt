@@ -13906,6 +13906,9 @@ win95			Win32 version for MS-Windows 95/98/ME (always false)
 winaltkeys		Compiled with 'winaltkeys' option.
 windows			Compiled with support for more than one window.
 			(always true)
+winui			Compiled with the JoliVIM WinUI 3 GUI; use it to guard
+			WinUI-only options like 'toolbariconstyle' in a vimrc
+			shared with a regular Vim.
 writebackup		Compiled with 'writebackup' default on.
 xattr			Compiled with extended attributes support |xattr|
 			(currently only supported on Linux).

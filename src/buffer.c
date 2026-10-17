@@ -4108,7 +4108,7 @@ maketitle(void)
 	    // cast sizes to it.
 #define SPACE_FOR_FNAME (sizeof(buf) - 100)
 #define SPACE_FOR_DIR   (sizeof(buf) - 20)
-#define SPACE_FOR_ARGNR (sizeof(buf) - 10)  // at least room for " - VIM"
+#define SPACE_FOR_ARGNR (sizeof(buf) - 15)  // at least room for " - JoliVIM"
 
 	    // file name
 	    if (curbuf->b_fname == NULL)
@@ -4240,7 +4240,7 @@ maketitle(void)
 		(serverName != NULL)
 		    ? serverName :
 #endif
-		    (char_u *)"VIM");
+		    (char_u *)"JoliVIM");
 
 	    if (maxlen > 0)
 	    {

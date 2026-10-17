@@ -2426,7 +2426,7 @@ static struct vimoption options[] =
 			    {(char_u *)FALSE, (char_u *)TRUE} SCTX_INIT},
     {"showtabline", "stal", P_NUM|P_VI_DEF|P_RALL,
 			    (char_u *)&p_stal, PV_NONE, did_set_showtabline, NULL,
-			    {(char_u *)1L, (char_u *)0L} SCTX_INIT},
+			    {(char_u *)2L, (char_u *)0L} SCTX_INIT},
 #if defined(FEAT_TABPANEL)
     {"showtabpanel", "stpl", P_NUM|P_RALL,
 			    (char_u *)&p_stpl, PV_NONE, did_set_showtabpanel, NULL,
@@ -2805,6 +2805,17 @@ static struct vimoption options[] =
 			    (char_u *)&p_tbis, PV_NONE,
 			    did_set_toolbariconsize, expand_set_toolbariconsize,
 			    {(char_u *)"small", (char_u *)0L}
+#else
+			    (char_u *)NULL, PV_NONE, NULL, NULL,
+			    {(char_u *)0L, (char_u *)0L}
+#endif
+			    SCTX_INIT},
+    {"toolbariconstyle", "tbst", P_STRING|P_VI_DEF,
+#if defined(FEAT_TOOLBAR) && defined(FEAT_WINUI)
+			    (char_u *)&p_tbst, PV_NONE,
+			    did_set_toolbariconstyle,
+			    expand_set_toolbariconstyle,
+			    {(char_u *)"auto", (char_u *)0L}
 #else
 			    (char_u *)NULL, PV_NONE, NULL, NULL,
 			    {(char_u *)0L, (char_u *)0L}
