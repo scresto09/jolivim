@@ -14,6 +14,9 @@ Repository: <https://github.com/scresto09/jolivim>
 
 For issues, please visit <https://github.com/scresto09/jolivim/issues>
 
+[![JoliVIM with the light theme](https://scresto.pages-perso.free.fr/images/jolivim-clair.png)](https://scresto.pages-perso.free.fr/images/jolivim-clair.png)
+[![JoliVIM with the dark theme](https://scresto.pages-perso.free.fr/images/jolivim-sombre.png)](https://scresto.pages-perso.free.fr/images/jolivim-sombre.png)
+
 ---
 
 ## What's different from Vim
