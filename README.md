@@ -10,6 +10,9 @@ edits, just my personal opinion, of course :-)
 JoliVIM is an **independent project and is not affiliated with the Vim
 project**.
 
+Download it from the Microsoft Store:
+<https://apps.microsoft.com/detail/9n2288l1n1fj>
+
 Repository: <https://github.com/scresto09/jolivim>
 
 For issues, please visit <https://github.com/scresto09/jolivim/issues>
