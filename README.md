@@ -1,7 +1,7 @@
 # JoliVIM
 
 **JoliVIM** is a playful fork of [Vim](https://www.vim.org), made for fun by
-**Sylvain Cresto**. It specializes Vim's Windows GUI (the `jvim` binary) for **Windows 11**,
+**Sylvain Cresto**, with the help of Claude Opus. It specializes Vim's Windows GUI (the `jvim` binary) for **Windows 11**,
 giving it a modern **WinUI 3** look while staying 100% Vim underneath.
 
 It is **open source and freely distributable**, making Vim look as good as it
