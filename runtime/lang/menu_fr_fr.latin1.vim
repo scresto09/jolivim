@@ -46,8 +46,8 @@ menutrans Open\ &Tab\.\.\.<Tab>:tabnew		Ouvrir\ dans\ un\ onglet\.\.\.<Tab>:tabn
 menutrans &New<Tab>:enew			&Nouveau<Tab>:enew
 menutrans &Close<Tab>:close			&Fermer<Tab>:close
 " -SEP1-
-menutrans &Save<Tab>:w				&Enregistrer<Tab>:w
-menutrans Save\ &As\.\.\.<Tab>:sav		Enregistrer\ &sous\.\.\.<Tab>:sav
+menutrans &Save<Tab>:w				Enre&gistrer<Tab>:w
+menutrans Save\ &As\.\.\.<Tab>:sav		Enregistrer\ so&us\.\.\.<Tab>:sav
 " -SEP2-
 menutrans Split\ &Diff\ with\.\.\.		&Différence\ avec\.\.\.
 "menutrans Split\ Patched\ &By\.\.\.		&Patcher\ avec\.\.\.
@@ -57,6 +57,10 @@ menutrans &Print				&Imprimer
 " -SEP4-
 menutrans Sa&ve-Exit<Tab>:wqa			En&registrer\ et\ quitter<Tab>:wqa
 menutrans E&xit<Tab>:qa				&Quitter<Tab>:qa
+" Main menu of the header bar (GNOME)
+menutrans &New\ Window				Nou&velle\ fenêtre
+menutrans &Discard\ Changes<Tab>:e!		Aban&donner\ les\ modifications<Tab>:e!
+menutrans F&ullscreen				&Plein\ écran
 
 
 menutrans &Edit				&Edition

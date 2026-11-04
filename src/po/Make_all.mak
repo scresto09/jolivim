@@ -194,11 +194,13 @@ CHECKFILES = \
 
 PO_VIM_INPUTLIST = \
 	../../runtime/optwin.vim \
+	../../runtime/menu_adwaita.vim \
 	../../runtime/autoload/typeset.vim \
 	../../runtime/defaults.vim
 
 PO_VIM_JSLIST = \
 	optwin.js \
+	menu_adwaita.js \
 	typeset.js \
 	defaults.js
 

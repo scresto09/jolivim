@@ -11968,7 +11968,7 @@ msgstr "Voix ambiguë d'un c½ur qui au zéphyr préfère les jattes de kiwis"
 # JoliVIM: dialog for all the changed buffers (gui_w32_winui.c)
 
 msgid "Save changes to the following files?"
-msgstr "Enregistrer les modifications des fichiers suivants ?"
+msgstr "Enregistrer les modifications des fichiers suivants ?"
 
 msgid "Changes to the files that are not selected will be lost."
 msgstr "Les modifications des fichiers non sélectionnés seront perdues."
@@ -11981,3 +11981,98 @@ msgstr "&Tout abandonner"
 
 msgid "\"win11\", \"classic\" or \"auto\"; style of toolbar icons"
 msgstr "\"win11\", \"classic\" ou \"auto\" ; style des icônes de la barre d'outils"
+
+# JoliVIM: GNOME GUI (gui_gtk4_adw.c, menu_adwaita.vim)
+
+msgid "Unix/Linux (LF)"
+msgstr "Unix/Linux (LF)"
+
+msgid "Windows (CR+LF)"
+msgstr "Windows (CR+LF)"
+
+msgid "Classic Mac (CR)"
+msgstr "Mac classique (CR)"
+
+msgid "None"
+msgstr "Aucun"
+
+msgid "Name"
+msgstr "Nom"
+
+msgid "Location"
+msgstr "Emplacement"
+
+msgid "File Type"
+msgstr "Type de fichier"
+
+msgid "Selects the syntax highlighting and indentation settings for this buffer."
+msgstr "Sélectionne la coloration syntaxique et les réglages d'indentation de ce buffer."
+
+msgid "Encoding"
+msgstr "Encodage"
+
+msgid "Character encoding used when writing the file. The text is not read again."
+msgstr "Encodage des caractères utilisé pour écrire le fichier. Le texte n'est pas relu."
+
+msgid "Line Endings"
+msgstr "Fins de ligne"
+
+msgid "Line endings used when writing the file. The text is not read again."
+msgstr "Fins de ligne utilisées pour écrire le fichier. Le texte n'est pas relu."
+
+msgid "Insert Spaces"
+msgstr "Insérer des espaces"
+
+msgid "Insert spaces instead of Tab characters in this buffer."
+msgstr "Insère des espaces au lieu de caractères de tabulation dans ce buffer."
+
+msgid "Tab Width"
+msgstr "Largeur de tabulation"
+
+msgid "Display width of Tab characters in this buffer."
+msgstr "Largeur d'affichage des caractères de tabulation dans ce buffer."
+
+msgid "Indent Width"
+msgstr "Largeur d'indentation"
+
+msgid "Indentation width used by >> and automatic indentation in this buffer."
+msgstr "Largeur d'indentation utilisée par >> et l'indentation automatique dans ce buffer."
+
+msgid "Lines"
+msgstr "Lignes"
+
+msgid "No Recent Files"
+msgstr "Aucun fichier récent"
+
+msgid "Search Files"
+msgstr "Rechercher des fichiers"
+
+msgid "Open"
+msgstr "Ouvrir"
+
+msgid "Recent Files"
+msgstr "Fichiers récents"
+
+msgid "Main Menu"
+msgstr "Menu principal"
+
+msgid "Document Properties"
+msgstr "Propriétés du document"
+
+msgid "Save Changes?"
+msgstr "Enregistrer les modifications ?"
+
+msgid "Changes which are not saved will be permanently lost."
+msgstr "Les modifications non enregistrées seront définitivement perdues."
+
+msgid "_Discard"
+msgstr "A_bandonner"
+
+msgid "Discard all changes and read the file again?"
+msgstr "Abandonner toutes les modifications et relire le fichier ?"
+
+msgid "Discard all changes?"
+msgstr "Abandonner toutes les modifications ?"
+
+msgid "&Cancel\n&Discard Changes"
+msgstr "&Annuler\nA&bandonner les modifications"
