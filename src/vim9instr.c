@@ -307,6 +307,14 @@ set_tuple_union_type_on_stack(type_T *type1, type_T *type2, cctx_T *cctx)
     // The concatenated tuple has the union of types from both the tuples
     garray_T	tuple_types_ga;
 
+    // When the number of items in one of the tuples is not known, then the
+    // item types of the resulting tuple are not known either.
+    if (type1->tt_argcount < 0 || type2->tt_argcount < 0)
+    {
+	set_type_on_stack(cctx, &t_tuple_any, 0);
+	return OK;
+    }
+
     ga_init2(&tuple_types_ga, sizeof(type_T *), 10);
 
     if (type1->tt_argcount > 0)
@@ -1518,7 +1526,11 @@ generate_NEWTUPLE(cctx_T *cctx, int count, int use_null)
 	return FAIL;
     }
 
-    type = get_tuple_type(&tuple_types_ga, cctx->ctx_type_list);
+    // An empty tuple can be used for any tuple type.
+    if (count == 0)
+	type = &t_tuple_empty;
+    else
+	type = get_tuple_type(&tuple_types_ga, cctx->ctx_type_list);
     decl_type = &t_tuple_any;
 
     ga_clear(&tuple_types_ga);
@@ -2092,6 +2104,15 @@ generate_CALL(
 	isn->isn_arg.mfunc->cmf_idx = mi;
 	isn->isn_arg.mfunc->cmf_argcount = argcount;
 	isn->isn_arg.mfunc->cmf_is_super = is_super;
+	// For a generic method "ufunc" has the type arguments, the method of
+	// the object class is created with the same type arguments when
+	// called.
+	isn->isn_arg.mfunc->cmf_ufunc = NULL;
+	if (ufunc != cl->class_obj_methods[mi])
+	    isn->isn_arg.mfunc->cmf_ufunc = ufunc;
+	isn->isn_arg.mfunc->cmf_cache_cl = NULL;
+	isn->isn_arg.mfunc->cmf_cache_generic = NULL;
+	isn->isn_arg.mfunc->cmf_cache_ufunc = NULL;
     }
     else if (isn->isn_type == ISN_DCALL)
     {
@@ -2867,6 +2888,7 @@ delete_instr(isn_T *isn)
 	    {
 		cmfunc_T  *mfunc = isn->isn_arg.mfunc;
 		class_unref(mfunc->cmf_itf);
+		class_unref(mfunc->cmf_cache_cl);
 		vim_free(mfunc);
 	    }
 	    break;

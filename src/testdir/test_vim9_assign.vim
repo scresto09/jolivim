@@ -214,7 +214,7 @@ def Test_assignment()
   v9.CheckDefFailure(['var s:var = 123'], 'E1101:')
   v9.CheckDefFailure(['var s:var: number'], 'E1101:')
 
-  v9.CheckDefAndScriptFailure(['var $VAR: number'], ['E1016:', 'E475:'])
+  v9.CheckDefAndScriptFailure(['var $VAR: number'], ['E1000:', 'E475:'])
 
   lines =<< trim END
     vim9script
@@ -313,6 +313,23 @@ def Test_assign_concat()
       ls[-1] ..= 'foo'
   END
   v9.CheckDefExecAndScriptFailure(lines, 'E684: List index out of range: -1', 2)
+
+  # a target of type any that holds a number is converted too
+  lines =<< trim END
+      var d: dict<any> = {a: 1}
+      d.a ..= 'z'
+      assert_equal({a: '1z'}, d)
+      var n: any = 0
+      n ..= 'zero'
+      assert_equal('0zero', n)
+  END
+  v9.CheckDefAndScriptSuccess(lines)
+
+  lines =<< trim END
+      var l: any = [1]
+      l ..= 'x'
+  END
+  v9.CheckDefExecAndScriptFailure(lines, ['E1105:', 'E734:'], 2)
 enddef
 
 def Test_assign_register()
@@ -432,6 +449,71 @@ def Test_type_with_extra_white()
       const x : number = 3
   END
   v9.CheckDefExecAndScriptFailure(lines, 'E1059:')
+enddef
+
+" A very deeply nested type gives an error instead of running out of stack
+def Test_type_nested_too_deep()
+  var lines = ['vim9script',
+        'var x: ' .. repeat('list<', 1001) .. 'number' .. repeat('>', 1001)]
+  v9.CheckSourceFailure(lines, 'E1439: Type nested too deep', 2)
+
+  lines[1] = 'var x: ' .. repeat('list<', 100000) .. 'number'
+        .. repeat('>', 100000)
+  v9.CheckSourceFailure(lines, 'E1439: Type nested too deep', 2)
+
+  lines = ['vim9script',
+        'def Fn()',
+        '  var x: ' .. repeat('list<', 100000) .. 'number'
+        .. repeat('>', 100000),
+        'enddef',
+        'defcompile Fn']
+  v9.CheckSourceFailure(lines, 'E1439: Type nested too deep', 1)
+
+  lines = ['vim9script',
+        'var x: ' .. repeat('list<', 1000) .. 'number' .. repeat('>', 1000)]
+  v9.CheckSourceSuccess(lines)
+
+  # Nesting type aliases cannot be used to circumvent the depth limit
+  lines =<< trim END
+    vim9script
+    type T0 = number
+    execute range(1, 100000)
+          ->mapnew((_, i) => $'type T{i} = list<T{i - 1}>')
+          ->join("\n")
+    var x: T100000 = []
+    echo typename(x)
+  END
+  v9.CheckSourceFailure(lines, 'E1439: Type nested too deep', 3)
+
+  lines =<< trim END
+    vim9script
+    type T0 = number
+    execute range(1, 1000)
+          ->mapnew((_, i) => $'type T{i} = list<T{i - 1}>')
+          ->join("\n")
+    var x: T1000 = []
+    assert_equal(repeat('list<', 1000) .. 'number' .. repeat('>', 1000),
+          typename(x))
+  END
+  v9.CheckSourceSuccess(lines)
+  lines[2] = "execute range(1, 1001)"
+  v9.CheckSourceFailure(lines, 'E1439: Type nested too deep', 3)
+
+  # A type alias used inside another type
+  lines =<< trim END
+    vim9script
+    type T0 = number
+    execute range(1, 900)
+          ->mapnew((_, i) => $'type T{i} = list<T{i - 1}>')
+          ->join("\n")
+    var x: dict<T900>
+    var y: tuple<number, T900>
+    var F: func(T900): T900
+    execute $"var w: list<{repeat('list<', 99)}T900{repeat('>', 99)}>"
+  END
+  v9.CheckSourceSuccess(lines)
+  lines[-1] = 'execute $"var w: list<{repeat(''list<'', 100)}T900{repeat(''>'', 100)}>"'
+  v9.CheckSourceFailure(lines, 'E1439: Type nested too deep', 9)
 enddef
 
 def Test_keep_type_after_assigning_null()
@@ -555,6 +637,19 @@ def Test_assign_unpack()
       [v1, v2; _] = [1]
   END
   v9.CheckDefFailure(lines, 'E1093: Expected 2 items but got 1', 3)
+
+  # null_list and null_tuple have no items
+  for null_value in ['null_list', 'null_tuple']
+    lines =<< trim eval END
+        var [v1, v2] = {null_value}
+    END
+    v9.CheckDefFailure(lines, 'E1093: Expected 2 items but got 0', 1)
+
+    lines =<< trim eval END
+        var [v1; v2] = {null_value}
+    END
+    v9.CheckDefFailure(lines, 'E1093: Expected 1 items but got 0', 1)
+  endfor
 
   lines =<< trim END
       var v1: number
@@ -1638,8 +1733,8 @@ def Test_assignment_failure()
   v9.CheckDefFailure(['&g:option = 5'], 'E113:')
   v9.CheckScriptFailure(['vim9script', 'var &tabstop = 4'], 'E1052:')
 
-  v9.CheckDefFailure(['var $VAR = 5'], 'E1016: Cannot declare an environment variable:')
-  v9.CheckScriptFailure(['vim9script', 'var $ENV = "xxx"'], 'E1016:')
+  v9.CheckDefFailure(['var $VAR = 5'], 'E1000: Cannot declare an environment variable:')
+  v9.CheckScriptFailure(['vim9script', 'var $ENV = "xxx"'], 'E1000:')
 
   # read-only registers
   v9.CheckDefAndScriptFailure(['var @. = 5'], ['E354:', 'E1066:'], 1)
@@ -1737,6 +1832,23 @@ def Test_assign_list()
       assert_equal([1, 2, 3], ul)
   END
   v9.CheckDefAndScriptSuccess(lines)
+
+  # A slice of a list or blob that is an item or member of another value
+  lines =<< trim END
+      var ll = [[1, 2]]
+      ll[0][0 : 0] = [9]
+      assert_equal([[9, 2]], ll)
+
+      var d = {a: [1, 2]}
+      d.a[1 : 1] = [8]
+      assert_equal({a: [1, 8]}, d)
+
+      var lb = [0z0000]
+      lb[0][1 : 1] = 0z01
+      assert_equal([0z0001], lb)
+  END
+  v9.CheckDefAndScriptSuccess(lines)
+  v9.CheckDefFailure(['var ll = [[1, 2]]', 'll[0][0 : 0] = 7'], 'E1012: Type mismatch; expected list<number> but got number', 2)
 
   lines =<< trim END
       var l = [1, 2]

@@ -1,4 +1,4 @@
-*version9.txt*	For Vim version 9.2.  Last change: 2026 Oct 13
+*version9.txt*	For Vim version 9.2.  Last change: 2026 Nov 02
 
 
 		  VIM REFERENCE MANUAL	  by Bram Moolenaar
@@ -52662,6 +52662,8 @@ Other ~
 - The "term_finish" option of term_start() supports a "noclose" value.
 - Control Vim via a channel using stdin/stdout |channel-stdio|.
 - 'tagfunc' is now also used for :tag completion.
+- 'completeopt' takes the new value "pathopt" to make the file name completion
+  consult the 'path' option |i_CTRL-X_CTRL-F|.
 
 Platform specific ~
 -----------------
@@ -52717,6 +52719,8 @@ Changed ~
 - The highlighting groups |hl-CursorLineFold| and |hl-CursorLineSign| are
   always used when 'cursorline' is set.
 - Virtual text above a line is now counted by |screenpos()| and |virtcol()|.
+- The default values of |t_AU| and |t_8u| use colons to separate the
+  parameters of the color for |underline| and |undercurl|.
 
 							*added-9.3*
 Added ~

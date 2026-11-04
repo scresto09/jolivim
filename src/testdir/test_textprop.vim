@@ -3631,6 +3631,63 @@ func Test_prop_with_text_above_screenline_motion()
   bwipe!
 endfunc
 
+func Test_prop_with_text_above_smoothscroll()
+  call NewWindow(6, 40)
+  setlocal smoothscroll scrolloff=0
+  let rowa = repeat('a', 40)
+  let rowb = repeat('b', 40)
+  let rowc = repeat('c', 20)
+  call setline(1, ['line 1', rowa .. rowb .. rowc]
+	\ + map(range(3, 12), '"line " .. v:val'))
+  call prop_type_add('test', #{highlight: 'Normal'})
+
+  let tests = [
+	\ ['Example', [
+	\   ['line 1', 'Example', rowa, rowb, rowc, 'line 3'],
+	\   ['Example', rowa, rowb, rowc, 'line 3', 'line 4'],
+	\   ['<<<' .. rowa[3 :], rowb, rowc, 'line 3', 'line 4', 'line 5'],
+	\   ['<<<' .. rowb[3 :], rowc, 'line 3', 'line 4', 'line 5', 'line 6'],
+	\   ['<<<' .. rowc[3 :], 'line 3', 'line 4', 'line 5', 'line 6',
+	\     'line 7'],
+	\   ['line 3', 'line 4', 'line 5', 'line 6', 'line 7', 'line 8'],
+	\ ]],
+	\ ['Second', [
+	\   ['line 1', 'Example', 'Second', rowa, rowb, rowc],
+	\   ['Example', 'Second', rowa, rowb, rowc, 'line 3'],
+	\   ['<<<ond', rowa, rowb, rowc, 'line 3', 'line 4'],
+	\   ['<<<' .. rowa[3 :], rowb, rowc, 'line 3', 'line 4', 'line 5'],
+	\   ['<<<' .. rowb[3 :], rowc, 'line 3', 'line 4', 'line 5', 'line 6'],
+	\   ['<<<' .. rowc[3 :], 'line 3', 'line 4', 'line 5', 'line 6',
+	\     'line 7'],
+	\   ['line 3', 'line 4', 'line 5', 'line 6', 'line 7', 'line 8'],
+	\ ]],
+	\ ]
+  for [vtext, screens] in tests
+    call prop_add(2, 0, #{type: 'test', text: vtext, text_align: 'above'})
+    normal! gg
+    redraw
+    call assert_equal(screens[0],
+	  \ ScreenLines([1, 6], 40)->map('trim(v:val, " ", 2)'))
+    for idx in range(1, len(screens) - 1)
+      exe "normal! \<C-E>"
+      redraw
+      call assert_equal(screens[idx],
+	    \ ScreenLines([1, 6], 40)->map('trim(v:val, " ", 2)'),
+	    \ vtext .. ': CTRL-E to screen ' .. idx)
+    endfor
+    for idx in range(len(screens) - 2, 0, -1)
+      exe "normal! \<C-Y>"
+      redraw
+      call assert_equal(screens[idx],
+	    \ ScreenLines([1, 6], 40)->map('trim(v:val, " ", 2)'),
+	    \ vtext .. ': CTRL-Y to screen ' .. idx)
+    endfor
+  endfor
+
+  call prop_type_delete('test')
+  bwipe!
+endfunc
+
 func Test_prop_with_text_below_after_match()
   CheckScreendump
   CheckRunVimInTerminal
@@ -5375,6 +5432,102 @@ func Test_prop_add_over_uint16_max()
   call assert_fails("call prop_add(1, 1, {'type': 'overflow', 'length': 0})", 'E1580:')
   call assert_equal(0xffff, prop_list(1)->len())
   call prop_type_delete('overflow')
+  bwipe!
+endfunc
+
+" Adding or removing a text property that only highlights must not compute the
+" syntax highlighting again, which is slow when the property is far above the
+" displayed lines.
+func Test_prop_highlight_keeps_syntax_state()
+  CheckFeature profile
+  new
+  call setline(1, range(1, 1000)->map({_, v -> 'word ' .. v}))
+  syntax match TestNumber /\d\+/
+  syntax sync minlines=50
+  normal! G
+  redraw!
+  call prop_type_add('highlight_only', {'highlight': 'Search'})
+  syntime on
+  redraw
+
+  syntime clear
+  call prop_add(10, 1, {'type': 'highlight_only', 'length': 3})
+  redraw
+  call assert_notmatch('TestNumber', execute('syntime report'))
+
+  syntime clear
+  call prop_remove({'type': 'highlight_only'})
+  redraw
+  call assert_notmatch('TestNumber', execute('syntime report'))
+
+  call prop_add(10, 1, {'type': 'highlight_only', 'length': 3})
+  redraw
+  syntime clear
+  call prop_clear(10)
+  redraw
+  call assert_notmatch('TestNumber', execute('syntime report'))
+  syntime off
+
+  call prop_type_delete('highlight_only')
+  bwipe!
+endfunc
+
+" A highlight property added or removed in a buffer that is only shown in a
+" global and a tab-local popup window updates the popups, also without
+" ":redraw".
+func Test_prop_highlight_in_global_popup()
+  CheckRunVimInTerminal
+
+  let lines =<< trim END
+    let g:bufnr = bufadd('')
+    call bufload(g:bufnr)
+    call setbufline(g:bufnr, 1, 'one two')
+    call prop_type_add('popup_hl', {'bufnr': g:bufnr, 'highlight': 'Search'})
+    call popup_create(g:bufnr, {'tabpage': -1, 'line': 2, 'col': 2})
+    call popup_create(g:bufnr, {'line': 4, 'col': 2})
+    func AddProp(timer)
+      call prop_add(1, 1, {'bufnr': g:bufnr, 'type': 'popup_hl', 'length': 3})
+    endfunc
+    func RemoveProp(timer)
+      call prop_remove({'bufnr': g:bufnr, 'type': 'popup_hl'})
+    endfunc
+    " <Cmd> does not redraw the command line, only the property changes
+    nnoremap <F3> <Cmd>call timer_start(0, 'AddProp')<CR>
+    nnoremap <F4> <Cmd>call timer_start(0, 'RemoveProp')<CR>
+  END
+  call writefile(lines, 'XtestPopupProp', 'D')
+  let buf = RunVimInTerminal('-S XtestPopupProp', {'rows': 8})
+  let IsHighlighted = {row -> term_scrape(buf, row)->slice(1, 4)
+        \ ->filter({_, v -> v.bg == '#ffff40'})->len() == 3}
+  call WaitForAssert({-> assert_match('^\~one two', term_getline(buf, 2))})
+  call WaitForAssert({-> assert_match('^\~one two', term_getline(buf, 4))})
+  call assert_false(IsHighlighted(2))
+  call assert_false(IsHighlighted(4))
+
+  call term_sendkeys(buf, "\<F3>")
+  call WaitForAssert({-> assert_true(IsHighlighted(2) && IsHighlighted(4))})
+
+  call term_sendkeys(buf, "\<F4>")
+  call WaitForAssert({-> assert_false(IsHighlighted(2) || IsHighlighted(4))})
+
+  call StopVimInTerminal(buf)
+endfunc
+
+" The cursor moves up when prop_clear() removes virtual text above it.
+func Test_prop_clear_virtual_text_cursor()
+  new
+  call setline(1, ['one', 'two', 'three'])
+  call prop_type_add('above', {})
+  call prop_add(2, 0, {'type': 'above', 'text': 'virtual text', 'text_align': 'above'})
+  normal! 2G
+  redraw
+  call assert_equal(3, winline())
+
+  call prop_clear(2)
+  redraw
+  call assert_equal(2, winline())
+
+  call prop_type_delete('above')
   bwipe!
 endfunc
 

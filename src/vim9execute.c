@@ -2812,6 +2812,11 @@ execute_unletindex(isn_T *iptr, ectx_T *ectx)
 	    }
 	}
     }
+    else if (tv_dest->v_type == VAR_TUPLE)
+    {
+	status = FAIL;
+	emsg(_(e_tuple_is_immutable));
+    }
     else
     {
 	status = FAIL;
@@ -2894,6 +2899,12 @@ execute_unletrange(isn_T *iptr, ectx_T *ectx)
 					   tv_idx2->v_type != VAR_SPECIAL, n2);
 	    }
 	}
+    }
+    else if (tv_dest->v_type == VAR_TUPLE)
+    {
+	status = FAIL;
+	SOURCING_LNUM = iptr->isn_lnum;
+	emsg(_(e_cannot_slice_tuple));
     }
     else
     {
@@ -3306,6 +3317,13 @@ load_namespace_var(ectx_T *ectx, isntype_T isn_type, isn_T *iptr)
 	else
 	    semsg(_(e_undefined_variable_char_str),
 					      namespace, iptr->isn_arg.string);
+	// Push a value anyway, the stack must have the expected size when the
+	// error is ignored because of ":silent!" in a calling function.
+	typval_T *tv = STACK_TV_BOT(0);
+	tv->v_type = VAR_NUMBER;
+	tv->v_lock = 0;
+	tv->vval.v_number = 0;
+	++ectx->ec_stack.ga_len;
 	return FAIL;
     }
     else
@@ -3576,26 +3594,26 @@ exec_unpack_tuple(ectx_T *ectx, isn_T *iptr, typval_T *tv)
 	return EXEC_DONE;
     ectx->ec_stack.ga_len += count - 1;
 
-    // Variable after semicolon gets a list with the remaining
+    // Variable after semicolon gets a tuple with the remaining
     // items.
     if (semicolon)
     {
-	list_T	*rem_list =
-	    list_alloc_with_items(TUPLE_LEN(tuple) - count + 1);
+	tuple_T	*rem_tuple =
+	    tuple_alloc_with_items(TUPLE_LEN(tuple) - count + 1);
 
-	if (rem_list == NULL)
+	if (rem_tuple == NULL)
 	    return EXEC_DONE;
 	tv = STACK_TV_BOT(-count);
-	tv->v_type = VAR_LIST;
-	tv->vval.v_list = rem_list;
-	++rem_list->lv_refcount;
+	tv->v_type = VAR_TUPLE;
+	tv->vval.v_tuple = rem_tuple;
+	++rem_tuple->tv_refcount;
 	tv->v_lock = 0;
 	for (i = count - 1; i < TUPLE_LEN(tuple); ++i)
 	{
 	    typval_T tvcopy;
 
 	    copy_tv(TUPLE_ITEM(tuple, i), &tvcopy);
-	    list_set_item(rem_list, i - (count - 1), &tvcopy);
+	    tuple_set_item(rem_tuple, i - (count - 1), &tvcopy);
 	}
 	--count;
     }
@@ -4268,7 +4286,14 @@ exec_instructions(ectx_T *ectx)
 		    SOURCING_LNUM = iptr->isn_lnum;
 		    if (eval_variable(name, (int)STRLEN(name), 0,
 			      STACK_TV_BOT(0), NULL, EVAL_VAR_VERBOSE) == FAIL)
+		    {
+			tv = STACK_TV_BOT(0);
+			tv->v_type = VAR_NUMBER;
+			tv->v_lock = 0;
+			tv->vval.v_number = 0;
+			++ectx->ec_stack.ga_len;
 			goto on_error;
+		    }
 		    ++ectx->ec_stack.ga_len;
 		}
 		break;
@@ -4925,18 +4950,46 @@ exec_instructions(ectx_T *ectx)
 		    }
 
 		    ufunc_T *ufunc;
+		    class_T *cl;
 		    if (mfunc->cmf_is_super)
+		    {
 			// Doing "super.Func", use the specific ufunc.
-			ufunc = mfunc->cmf_itf->class_obj_methods[
-							    mfunc->cmf_idx];
+			cl = mfunc->cmf_itf;
+			ufunc = cl->class_obj_methods[mfunc->cmf_idx];
+		    }
 		    else
 		    {
-			class_T *cl = obj->obj_class;
+			cl = obj->obj_class;
 
 			// convert the interface index to the object index
 			int idx = object_index_from_itf_index(mfunc->cmf_itf,
 						     TRUE, mfunc->cmf_idx, cl);
 			ufunc = cl->class_obj_methods[idx];
+		    }
+
+		    // A generic method: use the method with the type arguments
+		    // used when compiling.  The last one is cached, since
+		    // looking it up is slow.
+		    if (mfunc->cmf_ufunc != NULL && IS_GENERIC_FUNC(ufunc))
+		    {
+			if (mfunc->cmf_cache_cl == cl
+				&& mfunc->cmf_cache_generic == ufunc)
+			    ufunc = mfunc->cmf_cache_ufunc;
+			else
+			{
+			    ufunc_T *generic_ufunc = ufunc;
+
+			    ufunc = generic_func_get_same_types(generic_ufunc,
+							    mfunc->cmf_ufunc);
+			    if (ufunc == NULL)
+				goto on_error;
+
+			    ++cl->class_refcount;
+			    class_unref(mfunc->cmf_cache_cl);
+			    mfunc->cmf_cache_cl = cl;
+			    mfunc->cmf_cache_generic = generic_ufunc;
+			    mfunc->cmf_cache_ufunc = ufunc;
+			}
 		    }
 
 		    if (call_ufunc(ufunc, NULL, mfunc->cmf_argcount, ectx,
@@ -5148,7 +5201,31 @@ exec_instructions(ectx_T *ectx)
 			vim_free(pt);
 			goto theend;
 		    }
-		    if (fill_partial_and_closure(pt, ufunc,
+		    if (extra != NULL && extra->fre_outer_depth > 0
+					   && (ufunc->uf_flags & FC_CLOSURE))
+		    {
+			// Use the context of the function where the nested
+			// generic function is defined.
+			partial_T *outer_pt = ectx->ec_outer_ref == NULL
+				    ? NULL : ectx->ec_outer_ref->or_partial;
+
+			for (int depth = 1; outer_pt != NULL
+				    && depth < extra->fre_outer_depth; ++depth)
+			    outer_pt = get_pt_outer(outer_pt)->out_up_partial;
+			if (outer_pt == NULL)
+			{
+			    SOURCING_LNUM = iptr->isn_lnum;
+			    iemsg("outer partial unexpectedly NULL for FUNCREF");
+			    vim_free(pt);
+			    goto theend;
+			}
+			pt->pt_func = ufunc;
+			pt->pt_refcount = 1;
+			pt->pt_outer_partial = outer_pt;
+			++outer_pt->pt_refcount;
+			++ufunc->uf_refcount;
+		    }
+		    else if (fill_partial_and_closure(pt, ufunc,
 			       extra == NULL ? NULL : &extra->fre_loopvar_info,
 								 ectx) == FAIL)
 		    {
@@ -6667,6 +6744,7 @@ call_def_function(
     int		defcount = ufunc->uf_args.ga_len - total_argc;
     sctx_T	save_current_sctx = current_sctx;
     int		did_emsg_before = did_emsg_cumul + did_emsg;
+    int		did_emsg_silent_before = did_emsg_silent;
     int		save_suppress_errthrow = suppress_errthrow;
     msglist_T	**saved_msg_list = NULL;
     msglist_T	*private_msg_list = NULL;
@@ -7036,8 +7114,10 @@ failed_early:
     // Not sure if this is necessary.
     suppress_errthrow = save_suppress_errthrow;
 
+    // Give a generic error only when no error was given, also not when
+    // ":silent!" was used.
     if (ret != OK && did_emsg_cumul + did_emsg == did_emsg_before
-							      && !need_rethrow)
+		    && did_emsg_silent == did_emsg_silent_before && !need_rethrow)
 	semsg(_(e_unknown_error_while_executing_str),
 						   printable_func_name(ufunc));
     funcdepth_restore(orig_funcdepth);
@@ -7590,7 +7670,9 @@ list_instructions(char *pfx, isn_T *instr, int instr_count, ufunc_T *ufunc)
 
 		    smsg("%s%4d METHODCALL %s.%s(argc %d)", pfx, current,
 			    mfunc->cmf_itf->class_name.string,
-			    mfunc->cmf_itf->class_obj_methods[
+			    mfunc->cmf_ufunc != NULL
+				? mfunc->cmf_ufunc->uf_name
+				: mfunc->cmf_itf->class_obj_methods[
 						      mfunc->cmf_idx]->uf_name,
 			    mfunc->cmf_argcount);
 		}
