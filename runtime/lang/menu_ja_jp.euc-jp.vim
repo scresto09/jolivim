@@ -2,7 +2,7 @@
 "
 " Menu Translations:	Japanese (EUC-JP)
 " Last Translator:	MURAOKA Taro <koron.kaoriya@gmail.com>
-" Last Change:		18-Jan-2026.
+" Last Change:		04-Nov-2026.
 "
 " Copyright (C) 2001-2026 MURAOKA Taro <koron.kaoriya@gmail.com>,
 "			  vim-jp <http://vim-jp.org/>
@@ -31,7 +31,7 @@ menutrans Co&pying		著作権情報(&P)
 menutrans &Sponsor		スポンサー(&S)
 menutrans O&rphans		孤児(&R)
 menutrans &Version		バージョン情報(&V)
-menutrans &About		Vimについて(&A)
+menutrans &About		JoliVIMについて(&A)
 
 let g:menutrans_help_dialog = "ヘルプを検索したいコマンドもしくは単語を入力してください:\n\n挿入モードのコマンドには i_ を先頭に付加します. (例: i_CTRL-X)\nコマンドライン編集コマンドには c_ を先頭に付加します. (例: c_<Del>)\nオプションの名前には ' を付加します. (例: 'shiftwidth')"
 
@@ -289,8 +289,8 @@ if has("toolbar")
     tmenu ToolBar.Shell		シェルを開く
     tmenu ToolBar.RunCtags	tags作成
     tmenu ToolBar.TagJump	タグジャンプ
-    tmenu ToolBar.Help		Vimヘルプ
-    tmenu ToolBar.FindHelp	Vimヘルプ検索
+    tmenu ToolBar.Help		JoliVIMヘルプ
+    tmenu ToolBar.FindHelp	JoliVIMヘルプ検索
   endfun
 endif
 

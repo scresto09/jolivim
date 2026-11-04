@@ -1,7 +1,7 @@
 " Menu Translations:	Polish
 " Maintainer:		Mikolaj Machowski ( mikmach AT wp DOT pl )
 " Initial Translation:	Marcin Dalecki <martin@dalecki.de>
-" Last Change: 17 May  2010
+" Last Change: 04 Nov 2026
 " Generated from menu_pl_pl.utf-8.vim, DO NOT EDIT
 
 " Quit when menu translations have already been done.
@@ -262,8 +262,8 @@ if has("toolbar")
     tmenu ToolBar.Shell		Otwórz pow³okê
     tmenu ToolBar.RunCtags	Twórz tagi w bie¿±cym katalogu
     tmenu ToolBar.TagJump		Skok do taga pod kursorem
-    tmenu ToolBar.Help		Pomoc Vima
-    tmenu ToolBar.FindHelp	Przeszukuj pomoc Vim-a
+    tmenu ToolBar.Help		Pomoc JoliVIM-a
+    tmenu ToolBar.FindHelp	Przeszukuj pomoc JoliVIM-a
   endfun
 endif
 

@@ -2,7 +2,7 @@
 " Previous translator:	Alejandro López-Valencia <dradul@users.sourceforge.net>
 " Last translator:	Omar Campagne Polaino <ocampagne@gmail.com>
 " Version:		9.1.385
-" Last Change:		2024 May 1
+" Last Change:		2026 Nov 04
 " Original translations
 
 " Quit when menu translations have already been done.
@@ -31,7 +31,7 @@ menutrans O&rphans		Ayude\ a\ los\ niños\ &huérfanos
 menutrans Co&pying		&Términos\ de\ Licencia
 menutrans Sponsor/Register	Benefactor/Regístrese
 menutrans &Version		&Versión\ e\ \información\ de\ configuración
-menutrans &About		&Acerca\ de\ Vim
+menutrans &About		&Acerca\ de\ JoliVIM
 
 " File menu
 menutrans &File				&Archivo

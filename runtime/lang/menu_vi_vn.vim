@@ -1,6 +1,6 @@
 " Menu Translations:	Vietnamese
 " Maintainer:		Phan Vinh Thinh <teppi@vnlinux.org>
-" Last Change:		12 Mar 2005
+" Last Change:		04 Nov 2026
 " Original translations
 " URL:			http://iatp.vspu.ac.ru/phan/vietvim/lang/menu_vi_vn.vim
 "
@@ -43,7 +43,7 @@ menutrans &Sponsor/Register		&Giúp\ đỡ/Đăng\ ký
 menutrans O&rphans			Trẻ\ &mồ\ côi
 "--------------------
 menutrans &Version			&Phiên\ bản
-menutrans &About			&Về\ Vim
+menutrans &About			&Về\ JoliVIM
 "
 "
 " File menu

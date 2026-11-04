@@ -8726,7 +8726,7 @@ gui_mch_dialog(
 
     // copy the title of the dialog
     nchar = nCopyAnsiToWideChar(p, (title ? (LPSTR)title
-				   : (LPSTR)("Vim "VIM_VERSION_MEDIUM)), TRUE);
+				   : (LPSTR)("JoliVIM "VIM_VERSION_MEDIUM)), TRUE);
     p += nchar;
 
     // do the font, since DS_3DLOOK doesn't work properly
@@ -9282,7 +9282,7 @@ gui_mch_tearoff(
     // copy the title of the dialog
     nchar = nCopyAnsiToWideChar(p, ((*title)
 			    ? (LPSTR)title
-			    : (LPSTR)("Vim "VIM_VERSION_MEDIUM)), TRUE);
+			    : (LPSTR)("JoliVIM "VIM_VERSION_MEDIUM)), TRUE);
     p += nchar;
 
     // do the font, since DS_3DLOOK doesn't work properly

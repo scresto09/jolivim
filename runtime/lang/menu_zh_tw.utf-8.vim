@@ -1,6 +1,6 @@
 " Menu Translations:	Traditional Chinese
 " Translated By:	Hung-Te Lin	<piaip@csie.ntu.edu.tw>
-" Last Change:		2026 Feb 19
+" Last Change:		2026 Nov 04
 " Original translations
 
 " {{{ Quit when menu translations have already been done.
@@ -28,7 +28,7 @@ menutrans &Sponsor		贊助(&S)
 menutrans O&rphans		拯救孤兒(&R)
 " ------------------------------------------------------------------------
 menutrans &Version		程式版本資訊(&V)
-menutrans &About		關於\ Vim(&A)
+menutrans &About		關於\ JoliVIM(&A)
 " }}}
 
 " {{{ File menu: complete
@@ -280,8 +280,8 @@ if has("toolbar")
     tmenu ToolBar.Shell		開啟一個命令列視窗 DosBox
     tmenu ToolBar.RunCtags	執行 ctags
     tmenu ToolBar.TagJump	跳到目前游標位置的 tag
-    tmenu ToolBar.Help		Vim 輔助說明
-    tmenu ToolBar.FindHelp	搜尋 Vim 說明文件
+    tmenu ToolBar.Help		JoliVIM 輔助說明
+    tmenu ToolBar.FindHelp	搜尋 JoliVIM 說明文件
   endfun
 endif
 " }}}

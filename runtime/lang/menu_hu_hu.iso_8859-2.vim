@@ -1,7 +1,7 @@
 " Menu Translations:	Hungarian (Magyar)
 " Original Translation:	Zoltán Árpádffy
 " Maintained By:	Kontra Gergely <kgergely@mcl.hu>
-" Last Change:		2020 Apr 23
+" Last Change:		2026 Nov 04
 "
 " This file was converted from menu_hu_hu.iso_8859-2.vim.  See there for
 " remarks.
@@ -218,8 +218,8 @@ if has("toolbar")
     tmenu ToolBar.Shell		Shell indítás
     tmenu ToolBar.RunCtags	Tag építés
     tmenu ToolBar.TagJump	Ugrás a kurzor alatti tagra
-    tmenu ToolBar.Help		Vim súgó
-    tmenu ToolBar.FindHelp	Keresés a Vim súgóban
+    tmenu ToolBar.Help		JoliVIM súgó
+    tmenu ToolBar.FindHelp	Keresés a JoliVIM súgóban
   endfun
 endif
 

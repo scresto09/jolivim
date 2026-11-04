@@ -1,6 +1,6 @@
 " Menu Translations:	Finnish
 " Maintainer:		Flammie Pirinen <flammie@iki.fi>
-" Last Change:		2024 Dec 23
+" Last Change:		2026 Nov 04
 " Original translations
 
 " Quit when menu translations have already been done.
@@ -469,7 +469,7 @@ fun! Do_toolbar_tmenu()
   tmenu ToolBar.Make				Suorita make
   tmenu ToolBar.RunCtags			Suorita CTags
   tmenu ToolBar.TagJump				Hypp‰‰ t‰giin
-  tmenu ToolBar.Help				Vimin ohje
+  tmenu ToolBar.Help				JoliVIMin ohje
   tmenu ToolBar.FindHelp			Etsi ohjeesta
 endfun
 

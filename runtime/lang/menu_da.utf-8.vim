@@ -1,6 +1,6 @@
 " Menu Translations:	Danish
 " Maintainer:		scootergrisen
-" Last Change:		2022 Nov 17
+" Last Change:		2026 Nov 04
 " Original translations
 
 " Quit when menu translations have already been done.
@@ -357,8 +357,8 @@ if has("toolbar")
   tmenu ToolBar.Make		Make nuværende projekt (:make)
   tmenu ToolBar.RunCtags	Build tags i nuværende mappetræ (!ctags -R .)
   tmenu ToolBar.TagJump		Hop til tag under markør
-  tmenu ToolBar.Help		Vim hjælp
-  tmenu ToolBar.FindHelp	Søg i Vim hjælp
+  tmenu ToolBar.Help		JoliVIM hjælp
+  tmenu ToolBar.FindHelp	Søg i JoliVIM hjælp
   endfun
 endif
 

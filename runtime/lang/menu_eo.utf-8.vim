@@ -1,6 +1,6 @@
 " Menu Translations:	Esperanto
 " Maintainer:		Dominique PELLE <dominique.pelle@free.fr>
-" Last Change:		2012 May 01
+" Last Change:		2026 Nov 04
 " Original translations
 " 
 " Quit when menu translations have already been done.
@@ -26,7 +26,7 @@ menutrans &Sponsor/Register			&Subteni/Registriĝi
 menutrans O&rphans				&Orfoj
 " -sep2-
 menutrans &Version				&Versio
-menutrans &About				Pri\ &Vim
+menutrans &About				Pri\ &JoliVIM
 
 let g:menutrans_help_dialog = "Tajpu komandon aŭ serĉendan vorton en la helparo.\n\nAldonu i_ por la komandoj de la enmeta reĝimo (ekz: i_CTRL-X)\nAldonu c_ por redakto de la komanda linio (ekz: c_<Del>)\nĈirkaŭi la opciojn per apostrofoj (ekz: 'shiftwidth')"
 
@@ -335,7 +335,7 @@ fun! Do_toolbar_tmenu()
   tmenu ToolBar.Make				Lanĉi make
   tmenu ToolBar.RunCtags			Krei etikedojn
   tmenu ToolBar.TagJump				Atingi tiun etikedon
-  tmenu ToolBar.Help				Helpo de Vim
+  tmenu ToolBar.Help				Helpo de JoliVIM
   tmenu ToolBar.FindHelp			Serĉo en helparo
 endfun
 

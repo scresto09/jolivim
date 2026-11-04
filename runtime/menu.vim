@@ -2,7 +2,7 @@
 " You can also use this as a start for your own set of menus.
 "
 " Maintainer:	The Vim Project <https://github.com/vim/vim>
-" Last Change:	2026 Oct 13
+" Last Change:	2026 Nov 04
 " Former Maintainer:	Bram Moolenaar <Bram@vim.org>
 
 " Note that ":an" (short for ":anoremenu") is often used to make a menu work
@@ -1160,8 +1160,8 @@ else
   tmenu ToolBar.Make		Make current project (:make)
   tmenu ToolBar.RunCtags	Build tags in current directory tree (!ctags -R .)
   tmenu ToolBar.TagJump		Jump to tag under cursor
-  tmenu ToolBar.Help		Vim Help
-  tmenu ToolBar.FindHelp	Search Vim Help
+  tmenu ToolBar.Help		JoliVIM Help
+  tmenu ToolBar.FindHelp	Search JoliVIM Help
 endif
 
 " Select a session to load; default to current session name if present

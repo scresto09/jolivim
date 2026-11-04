@@ -1,7 +1,7 @@
 " Menu Translations:	Slovenian / Slovensko
 " Maintainer:		Mojca Miklavec <mojca.miklavec.lists@gmail.com>
 " Originally By:	Mojca Miklavec <mojca.miklavec.lists@gmail.com>
-" Last Change:		2020 Apr 23
+" Last Change:		2026 Nov 04
 " vim:set foldmethod=marker tabstop=8:
 " Generated from menu_sl_si.utf-8.vim, DO NOT EDIT
 
@@ -280,8 +280,8 @@ if has("toolbar")
     tmenu ToolBar.Make		Napravi trenutni projekt (:make)
     tmenu ToolBar.RunCtags	Napravi znaèke v trenutnem direktoriju (!ctags -R.)
     tmenu ToolBar.TagJump	Skoèi k znaèki pod kurzorjem
-    tmenu ToolBar.Help		Pomoè za Vim
-    tmenu ToolBar.FindHelp	I¹èi v pomoèi za Vim
+    tmenu ToolBar.Help		Pomoè za JoliVIM
+    tmenu ToolBar.FindHelp	I¹èi v pomoèi za JoliVIM
   endfun
 endif
 " }}} TOOLBAR

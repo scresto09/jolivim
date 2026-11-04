@@ -1,7 +1,7 @@
 " Menu Translations:    Simplified Chinese
 " Maintainer:           Ada (Haowen) Yu <me@yuhaowen.com>
 " Previous Maintainer:  Shun Bai <baishunde@gmail.com>, Yuheng Xie <elephant@linux.net.cn>
-" Last Change:          2026 Feb 19
+" Last Change:          2026 Nov 04
 " Original translations
 "
 " Generated with the scripts from:
@@ -331,8 +331,8 @@ if has("toolbar")
     tmenu ToolBar.Make 生成当前项目 (:make)
     tmenu ToolBar.RunCtags 在当前目录生成标记(Tags) (!ctags -R .)
     tmenu ToolBar.TagJump 跳转到光标所在标记(Tag)
-    tmenu ToolBar.Help Vim 帮助
-    tmenu ToolBar.FindHelp 在 Vim 帮助中查找
+    tmenu ToolBar.Help JoliVIM 帮助
+    tmenu ToolBar.FindHelp 在 JoliVIM 帮助中查找
   endfun
 endif
 " }}}

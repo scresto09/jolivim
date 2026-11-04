@@ -1,6 +1,6 @@
 " Menu Translations:	Norwegian / Norsk (Bokmål)
 " Maintainer:		Øyvind A. Holm <sunny@sunbase.org>
-" Last Change:		2020 Apr 23
+" Last Change:		2026 Nov 04
 " menu_no_no.latin1.vim 289 2004-05-16 18:00:52Z sunny
 " Original translations
 
@@ -172,7 +172,7 @@ menutrans &Help		&Hjelp
 	menutrans &Sponsor/Register	S&tøtte/Registrering
 	menutrans O&rphans		Fo&reldreløse
 	menutrans &Version		&Versjon
-	menutrans &About		&Om\ Vim
+	menutrans &About		&Om\ JoliVIM
 
 " Popup
 	menutrans &Undo			&Angre
