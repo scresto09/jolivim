@@ -1825,12 +1825,14 @@ WinUI_DialogActive(void)
  * ContentDialog's content, so there is no 3-button limit.
  * Returns the 1-based index of the chosen button, or the last button on
  * Escape.  "inout_text" (when not NULL) holds the field text in and out.
+ * "checked" holds the state of the "nitems" check boxes in and out.
  * Returns -1 only when WinUI itself is unavailable.
  */
-    int
-WinUI_ShowDialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
+    static int
+show_dialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
         const WCHAR **buttons, int nbuttons, int dfltbutton,
-        WCHAR *inout_text, int text_len)
+        WCHAR *inout_text, int text_len,
+        const WCHAR **items, const WCHAR **tooltips, int *checked, int nitems)
 {
     if (s_in_popup || nbuttons < 1 || !ensure_init(hwnd))
         return -1;
@@ -1888,6 +1890,7 @@ WinUI_ShowDialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
             titleblock.FontWeight(
                     winrt::Windows::UI::Text::FontWeights::SemiBold());
             titleblock.Margin(mux::Thickness{0, 0, 0, 6});
+            titleblock.TextWrapping(mux::TextWrapping::WrapWholeWords);
             content.Children().Append(titleblock);
         }
 
@@ -1902,6 +1905,36 @@ WinUI_ShowDialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
             input = muxc::TextBox();
             input.Text(inout_text);
             content.Children().Append(input);
+        }
+
+        std::vector<muxc::CheckBox> checks;
+        auto nchecked = std::make_shared<int>(0);
+        if (nitems > 0)
+        {
+            auto list = muxc::StackPanel();
+
+            for (int i = 0; i < nitems; ++i)
+            {
+                muxc::CheckBox cb;
+                muxc::TextBlock name;
+
+                name.Text(items[i] != NULL ? items[i] : L"");
+                name.TextTrimming(mux::TextTrimming::CharacterEllipsis);
+                cb.Content(name);
+                cb.IsChecked(checked[i] != 0);
+                if (checked[i] != 0)
+                    ++*nchecked;
+                if (tooltips[i] != NULL)
+                    muxc::ToolTipService::SetToolTip(cb,
+                            winrt::box_value(winrt::hstring(tooltips[i])));
+                list.Children().Append(cb);
+                checks.push_back(cb);
+            }
+
+            muxc::ScrollViewer scroller;
+            scroller.MaxHeight(240);
+            scroller.Content(list);
+            content.Children().Append(scroller);
         }
 
         // The buttons, right-aligned.
@@ -1947,6 +1980,30 @@ WinUI_ShowDialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
                     d.Hide();
             });
             row.Children().Append(b);
+        }
+
+        if (default_btn != nullptr && !checks.empty())
+        {
+            winrt::weak_ref<muxc::Button> weak_btn = default_btn;
+
+            default_btn.IsEnabled(*nchecked > 0);
+            for (auto const &cb : checks)
+            {
+                cb.Checked([nchecked, weak_btn](wf::IInspectable const &,
+                                                mux::RoutedEventArgs const &)
+                {
+                    ++*nchecked;
+                    if (auto b = weak_btn.get())
+                        b.IsEnabled(true);
+                });
+                cb.Unchecked([nchecked, weak_btn](wf::IInspectable const &,
+                                                mux::RoutedEventArgs const &)
+                {
+                    --*nchecked;
+                    if (auto b = weak_btn.get())
+                        b.IsEnabled(*nchecked > 0);
+                });
+            }
         }
 
         // Bottom block: the button bar, on a slightly different background.
@@ -2014,13 +2071,18 @@ WinUI_ShowDialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
 
         // Enter triggers the default button, Escape the last (cancel) one.
         int dflt = (dfltbutton >= 1 && dfltbutton <= nbuttons) ? dfltbutton : 1;
-        outer.KeyDown([state, weak, dflt, nbuttons](wf::IInspectable const &,
+        bool has_checks = !checks.empty();
+        outer.KeyDown([state, weak, dflt, nbuttons, has_checks, nchecked](
+                        wf::IInspectable const &,
                         mux::Input::KeyRoutedEventArgs const &e)
         {
             auto key = e.Key();
             if (key == winrt::Windows::System::VirtualKey::Enter)
             {
                 e.Handled(true);
+                // The default button is disabled.
+                if (has_checks && *nchecked <= 0)
+                    return;
                 state->result = dflt;
                 state->done = true;
                 if (auto d = weak.get())
@@ -2071,6 +2133,12 @@ WinUI_ShowDialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
                 wmemcpy(inout_text, t.c_str(), n);
                 inout_text[n] = L'\0';
             }
+            for (size_t i = 0; i < checks.size(); ++i)
+            {
+                auto value = checks[i].IsChecked();
+
+                checked[i] = value != nullptr && value.Value() ? 1 : 0;
+            }
         }
         else
         {
@@ -2104,6 +2172,24 @@ WinUI_ShowDialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
     else if (s_parent != NULL)
         SetFocus(s_parent);
     return result;
+}
+
+    int
+WinUI_ShowDialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
+        const WCHAR **buttons, int nbuttons, int dfltbutton,
+        WCHAR *inout_text, int text_len)
+{
+    return show_dialog(hwnd, title, message, buttons, nbuttons, dfltbutton,
+                                inout_text, text_len, NULL, NULL, NULL, 0);
+}
+
+    int
+WinUI_ShowChecklistDialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
+        const WCHAR **items, const WCHAR **tooltips, int *checked, int nitems,
+        const WCHAR **buttons, int nbuttons, int dfltbutton)
+{
+    return show_dialog(hwnd, title, message, buttons, nbuttons, dfltbutton,
+                                NULL, 0, items, tooltips, checked, nitems);
 }
 
 // ---------------------------------------------------------------------------

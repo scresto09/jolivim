@@ -717,6 +717,134 @@ winui_dialog(
     vim_free(wfield);
     return ret;
 }
+
+/*
+ * Return TRUE if "buf" is changed and can be written like with "Save All".
+ */
+    static int
+changed_buf_can_write(buf_T *buf)
+{
+    return bufIsChanged(buf)
+	    && (buf->b_ffname != NULL
+#  ifdef FEAT_BROWSE
+		|| (cmdmod.cmod_flags & CMOD_BROWSE)
+#  endif
+	       )
+	    && !bt_dontwrite(buf)
+	    && !buf->b_p_ro;
+}
+
+/*
+ * Ask in one dialog which changed buffers to write, the others are discarded.
+ * Returns FALSE when the normal dialog must be used.
+ */
+    int
+gui_mch_dialog_changed(buf_T *buf)
+{
+    buf_T	*buf2;
+    buf_T	**bufs = NULL;
+    bufref_T	*bufrefs = NULL;
+    WCHAR	**wnames = NULL;
+    WCHAR	**wpaths = NULL;
+    int		*save = NULL;
+    WCHAR	*wtitle = NULL;
+    WCHAR	*wmsg = NULL;
+    WCHAR	*wbuttons[3] = {NULL, NULL, NULL};
+    int		count = 1;
+    int		ret = -1;
+    int		i;
+
+    // Same conditions as do_dialog().
+    if (!gui.in_use || s_hwnd == NULL || get_gui_dialog_file() != NULL
+				    || vim_strchr(p_go, GO_CONDIALOG) != NULL)
+	return FALSE;
+
+    FOR_ALL_BUFFERS(buf2)
+	if (buf2 != buf && changed_buf_can_write(buf2))
+	    ++count;
+    if (count < 2)
+	return FALSE;
+
+    bufs = ALLOC_MULT(buf_T *, count);
+    bufrefs = ALLOC_MULT(bufref_T, count);
+    save = ALLOC_MULT(int, count);
+    wnames = ALLOC_CLEAR_MULT(WCHAR *, count);
+    wpaths = ALLOC_CLEAR_MULT(WCHAR *, count);
+    if (bufs == NULL || bufrefs == NULL || save == NULL || wnames == NULL
+							     || wpaths == NULL)
+	goto theend;
+
+    bufs[0] = buf;
+    count = 1;
+    FOR_ALL_BUFFERS(buf2)
+	if (buf2 != buf && changed_buf_can_write(buf2))
+	    bufs[count++] = buf2;
+    for (i = 0; i < count; ++i)
+    {
+	set_bufref(&bufrefs[i], bufs[i]);
+	save[i] = TRUE;
+	wnames[i] = (WCHAR *)enc_to_utf16(buf_get_fname(bufs[i]), NULL);
+	if (bufs[i]->b_ffname != NULL)
+	    wpaths[i] = (WCHAR *)enc_to_utf16(bufs[i]->b_ffname, NULL);
+    }
+
+    wtitle = (WCHAR *)enc_to_utf16(
+		    (char_u *)_("Save changes to the following files?"), NULL);
+    wmsg = (WCHAR *)enc_to_utf16((char_u *)_(
+	    "Changes to the files that are not selected will be lost."), NULL);
+    wbuttons[0] = (WCHAR *)enc_to_utf16((char_u *)_("&Save"), NULL);
+    wbuttons[1] = (WCHAR *)enc_to_utf16((char_u *)_("&Discard All"), NULL);
+    wbuttons[2] = (WCHAR *)enc_to_utf16((char_u *)_("&Cancel"), NULL);
+
+    ret = WinUI_ShowChecklistDialog(s_hwnd, wtitle, wmsg,
+		    (const WCHAR **)wnames, (const WCHAR **)wpaths, save, count,
+		    (const WCHAR **)wbuttons, 3, 1);
+    if (ret >= 0)
+	gui_dialog_done();
+
+    if (ret == 1 || ret == 2)
+    {
+	exarg_T	ea;
+	int	write_failed = FALSE;
+
+	CLEAR_FIELD(ea);
+
+	// Write first: nothing is discarded if that fails.
+	if (ret == 1)
+	    for (i = 0; i < count; ++i)
+	    {
+		if (!save[i] || !bufref_valid(&bufrefs[i])
+						    || !bufIsChanged(bufs[i]))
+		    continue;
+		dialog_write_buf(bufs[i], &ea);
+		if (bufref_valid(&bufrefs[i]) && bufIsChanged(bufs[i]))
+		    write_failed = TRUE;
+	    }
+
+	if (!write_failed)
+	    for (i = 0; i < count; ++i)
+		if ((ret == 2 || !save[i]) && bufref_valid(&bufrefs[i]))
+		    unchanged(bufs[i], TRUE, FALSE);
+    }
+
+theend:
+    if (wnames != NULL && wpaths != NULL)
+	for (i = 0; i < count; ++i)
+	{
+	    vim_free(wnames[i]);
+	    vim_free(wpaths[i]);
+	}
+    vim_free(bufs);
+    vim_free(bufrefs);
+    vim_free(save);
+    vim_free(wnames);
+    vim_free(wpaths);
+    vim_free(wtitle);
+    vim_free(wmsg);
+    for (i = 0; i < 3; ++i)
+	vim_free(wbuttons[i]);
+    return ret >= 0;
+}
 # endif
 
 // Callback for do_in_runtimepath(): keep the first match in the buffer.

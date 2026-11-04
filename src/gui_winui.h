@@ -92,6 +92,10 @@ void gui_winui_show_sysmenu(void);
 int WinUI_ShowDialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
         const WCHAR **buttons, int nbuttons, int dfltbutton,
         WCHAR *inout_text, int text_len);
+int WinUI_ShowChecklistDialog(HWND hwnd, const WCHAR *title,
+        const WCHAR *message, const WCHAR **items, const WCHAR **tooltips,
+        int *checked, int nitems, const WCHAR **buttons, int nbuttons,
+        int dfltbutton);
 int WinUI_ShowAbout(HWND hwnd, const WCHAR *image_path, const WCHAR *title,
         const WCHAR *info, const WCHAR *hints, const WCHAR *close_label,
         const WCHAR *link_text, const WCHAR *link_url);

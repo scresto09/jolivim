@@ -1,4 +1,4 @@
-*editing.txt*	For Vim version 9.2.  Last change: 2026 Aug 13
+*editing.txt*	For Vim version 9.2.  Last change: 2026 Nov 04
 
 
 		  VIM REFERENCE MANUAL	  by Bram Moolenaar
@@ -1283,6 +1283,11 @@ Examples: >
 <	If any modified, unsaved buffers exist, you will be prompted to save
 	or abandon each one.  There are also choices to "save all" or "abandon
 	all".
+	The JoliVIM WinUI GUI instead shows one dialog that lists the
+	modified files, with a check box to select the ones to save.  Changes
+	to the files that are not selected are discarded.  Read-only files and
+	files without a name, other than the current one, are not in the list
+	and are asked for afterwards.
 
 If you want to always use ":confirm", set the 'confirm' option.
 
