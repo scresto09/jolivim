@@ -17,6 +17,12 @@ set cpo&vim
 if !exists("did_install_default_menus")
 let did_install_default_menus = 1
 
+" The menus are shown from the main menu of the header bar, without entries to
+" load parts of them first, which would close that menu.
+if has("gui_adwaita") && !exists("do_no_lazyload_menus")
+  let do_no_lazyload_menus = 1
+endif
+
 
 if exists("v:lang") || &langmenu != ""
   " Try to find a menu translation file for the current language.
@@ -1183,6 +1189,11 @@ def s:SaveVimSesn()
   execute "browse mksession! " .. fnameescape(v:this_session)
 enddef
 
+endif
+
+" The main menu of the header bar (GTK 4 with libadwaita).
+if has("gui_adwaita")
+  source $VIMRUNTIME/menu_adwaita.vim
 endif
 
 endif " !exists("did_install_default_menus")

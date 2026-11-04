@@ -207,6 +207,16 @@ dialog_changed(
 	return;
 # endif
 
+# if defined(FEAT_GUI_GTK) && defined(USE_LIBADWAITA)
+    // The GUI asks for all the buffers in one dialog, unless 'guioptions' asks
+    // for console dialogs.
+    if (gui.in_use && vim_strchr(p_go, GO_CONDIALOG) == NULL)
+    {
+	gui_gtk_dialog_changed(buf, checkall);
+	return;
+    }
+# endif
+
     dialog_msg(buff, _("Save changes to \"%s\"?"), buf_get_fname(buf));
     if (checkall)
 	ret = vim_dialog_yesnoallcancel(VIM_QUESTION, NULL, buff, 1);
