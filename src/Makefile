@@ -994,7 +994,7 @@ VIMMINOR = 2
 
 ### Location of Vim files (should not need to be changed, and  {{{1
 ### some things might not work when they are changed!)
-VIMDIR = /vim
+VIMDIR = $(VIMDIRNAME)
 VIMRTDIR = /vim$(VIMMAJOR)$(VIMMINOR)
 HELPSUBDIR = /doc
 COLSUBDIR = /colors
@@ -1267,6 +1267,20 @@ GTK4_TARGETS	= installglinks
 GTK4_MAN_TARGETS = yes
 GTK4_TESTTARGET	= gui
 GTK4_BUNDLE	=
+
+### GTK4 GUI with libadwaita: JoliVIM for GNOME, with its own install targets
+ADWAITA_SRC	= $(GTK4_SRC)
+ADWAITA_OBJ	= $(GTK4_OBJ)
+ADWAITA_DEFS	= $(GTK4_DEFS)
+ADWAITA_IPATH	= $(GTK4_IPATH)
+ADWAITA_LIBS_DIR = $(GTK4_LIBS_DIR)
+ADWAITA_LIBS1	= $(GTK4_LIBS1)
+ADWAITA_LIBS2	= $(GTK4_LIBS2)
+ADWAITA_INSTALL	= install_jolivim
+ADWAITA_TARGETS	=
+ADWAITA_MAN_TARGETS =
+ADWAITA_TESTTARGET = $(GTK4_TESTTARGET)
+ADWAITA_BUNDLE	= $(GTK4_BUNDLE)
 
 ### Motif GUI
 MOTIF_SRC	= gui.c gui_motif.c gui_x11.c gui_beval.c \
@@ -2369,6 +2383,55 @@ install_normal: installvim installtools $(INSTALL_LANGS) install-icons
 
 install_gui_extra: installgtutorbin
 
+# JoliVIM for GNOME: only "jvim", which does not conflict with an installed Vim.
+JVIM_NAMES = VIMNAME=jvim EXNAME=jex VIEWNAME=jview
+JVIM_ICONS = 16 32 48 256
+
+install_jolivim: installjvimbin installjvimdesktop
+	$(MAKE) -f Makefile installruntime $(INSTALL_LANGS) $(JVIM_NAMES)
+	-find $(DEST_MAN_TOP) \( -name ejvim.1 -o -name jvimdiff.1 \
+		-o -name jvimtutor.1 -o -name jex.1 -o -name jview.1 \
+		-o -name rjvim.1 -o -name rjview.1 \) -exec rm -f {} +
+
+installjvimbin: $(VIMTARGET) $(DESTDIR)$(exec_prefix) $(DEST_BIN)
+	-rm -f $(DEST_BIN)/jvim
+	$(INSTALL_PROG) $(VIMTARGET) $(DEST_BIN)/jvim
+	$(STRIP) $(DEST_BIN)/jvim
+	chmod $(BINMOD) $(DEST_BIN)/jvim
+
+# Optional: "jvim-term" runs JoliVIM in the terminal.
+install-jvim-term: $(DEST_BIN)
+	rm -f $(DEST_BIN)/jvim-term
+	ln -s jvim $(DEST_BIN)/jvim-term
+
+installjvimdesktop:
+	$(MKDIR_P) $(DESKTOPPATH)
+	sed -e 's/^\(Name[^=]*\)=.*/\1=JoliVIM/' -e 's/^TryExec=.*/TryExec=jvim/' \
+		-e 's/^Exec=.*/Exec=jvim -f %F/' -e 's/^Icon=.*/Icon=jvim/' \
+		$(SCRIPTSOURCE)/gvim.desktop > $(DESKTOPPATH)/jvim.desktop
+	chmod $(FILEMOD) $(DESKTOPPATH)/jvim.desktop
+	for s in $(JVIM_ICONS); do \
+	   d=$(DESTDIR)$(DATADIR)/icons/hicolor/$${s}x$${s}/apps; \
+	   $(MKDIR_P) $$d; \
+	   $(INSTALL_DATA) msix/Assets/JoliVIM44x44Logo.targetsize-$$s.png $$d/jvim.png; \
+	done
+	if test -z "$(DESTDIR)" -a -x "$(GTK_UPDATE_ICON_CACHE)" \
+		-a -w $(ICONTHEMEPATH) -a -f $(ICONTHEMEPATH)/index.theme; then \
+	   $(GTK_UPDATE_ICON_CACHE) -q $(ICONTHEMEPATH); \
+	fi
+	if test -z "$(DESTDIR)" -a -x "$(UPDATE_DESKTOP_DATABASE)"; then \
+	   $(UPDATE_DESKTOP_DATABASE) -q $(DESKTOPPATH); \
+	fi
+
+uninstall_jolivim:
+	-rm -f $(DEST_BIN)/jvim $(DEST_BIN)/jvim-term
+	-rm -f $(DESKTOPPATH)/jvim.desktop
+	-for s in $(JVIM_ICONS); do \
+	   rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/$${s}x$${s}/apps/jvim.png; \
+	done
+	-rm -rf $(DEST_RT)
+	-find $(DEST_MAN_TOP) -name jvim.1 -exec rm -f {} +
+
 installvim: installvimbin installtutorbin \
 		installruntime installlinks installmanlinks
 
@@ -2871,7 +2934,10 @@ installmanlinks:
 	-$(SHELL) ./installml.sh install "$(GUI_MAN_TARGETS)" \
 		$(DEST_MAN) $(INSTALLMLARGS)
 
-uninstall: uninstall_runtime
+uninstall: $(UNINSTALL_TARGET)
+	@:
+
+uninstall_normal: uninstall_runtime
 	-rm -f $(DEST_BIN)/$(VIMTARGET)
 	-rm -f $(DEST_BIN)/vimtutor
 	-rm -f $(DEST_BIN)/gvimtutor

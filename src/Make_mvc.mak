@@ -45,7 +45,7 @@
 #	MSIX package of the whole Vim: "nmake -f Make_mvc.mak GUI=yes msix"
 #	  Creates the unsigned JoliVIM_<version>_<arch>.msix with jvim.exe,
 #	  the runtime files and the Windows 11 context menu entry, without
-#	  installer.  Use VIMDLL=yes to include vim.exe.  Requires makeappx.exe.
+#	  installer.  Use VIMDLL=yes to include jvim-term.exe.  Requires makeappx.exe.
 #	  See msix\make_msix.ps1.  "nmake -f Make_mvc.mak GUI=yes testmsix"
 #	  checks it, see msix\test_msix.ps1.
 #
@@ -68,7 +68,7 @@
 #
 #
 #	DLL support (EXPERIMENTAL): VIMDLL=yes (default is no)
-#	  Creates vim{32,64}.dll, and stub jvim.exe and vim.exe.
+#	  Creates jvim{32,64}.dll, and stub jvim.exe and jvim-term.exe.
 #	  The shared codes between the GUI and the console are built into
 #	  the DLL.  This reduces the total file size and memory usage.
 #	  Also supports `vim -g` and the `:gui` command.
@@ -652,7 +652,7 @@ CPUARG = /arch:$(CPUNR)
 MAKEFLAGS_GVIMEXT = $(MAKEFLAGS_GVIMEXT) CPUARG="$(CPUARG)"
 
 !IF "$(VIMDLL)" == "yes"
-VIMDLLBASE = vim
+VIMDLLBASE = jvim
 ! IF "$(CPU)" == "i386"
 VIMDLLBASE = $(VIMDLLBASE)32
 ! ELSE
@@ -913,6 +913,7 @@ RCFLAGS = $(RCFLAGS) -DFEAT_GUI_MSWIN
 ! IF "$(VIMDLL)" == "yes"
 SUBSYSTEM_CON = console
 GVIM = j$(VIM)
+VIM = $(GVIM)-term
 CUI_INCL = iscygpty.h
 CUI_OBJ = $(OUTDIR)\iscygpty.obj
 RCFLAGS = $(RCFLAGS) -DVIMDLL
@@ -1484,7 +1485,7 @@ JvimExt11/jvimext11.dll: $(JVIMEXT11_SRC)
 
 # "nmake -f Make_mvc.mak GUI=yes msix": MSIX package of the whole Vim, with
 # the Windows 11 context menu entry, see msix\make_msix.ps1.  Use VIMDLL=yes
-# to include vim.exe.  Options:
+# to include jvim-term.exe.  Options:
 #   PUBLISHER=		subject of the certificate used to sign the package
 #   MSIX_NAME=		identity name of the package (default "JoliVIM")
 #   MSIX_PUBLISHERNAME=	publisher display name

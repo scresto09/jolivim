@@ -2091,6 +2091,11 @@ parse_command_name(mparm_T *parmp)
 # ifdef VIMDLL
 	    || mch_is_gui_executable()
 # endif
+# ifdef USE_LIBADWAITA
+	    // "jvim" too, "jvim-term" stays in the terminal.
+	    || (STRNICMP(initstr, "jvim", 4) == 0
+				    && STRICMP(initstr + 4, "-term") != 0)
+# endif
        )
     {
 	main_start_gui();

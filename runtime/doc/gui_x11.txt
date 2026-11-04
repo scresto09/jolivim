@@ -1,4 +1,4 @@
-*gui_x11.txt*	For Vim version 9.2.  Last change: 2026 Nov 03
+*gui_x11.txt*	For Vim version 9.2.  Last change: 2026 Nov 04
 
 
 		  VIM REFERENCE MANUAL	  by Bram Moolenaar
@@ -400,6 +400,11 @@ page, show the properties of the current buffer and show the main menu.  By
 default 'guioptions' does not include "m" and "T" and in the GUI 'mousemodel'
 is "popup".  <F10> shows the whole menu of Vim, unless <F10> is mapped.  Use
 has("gui_adwaita") to check for this.
+
+"make install" installs JoliVIM next to an installed Vim: the only command is
+"jvim", which starts the GUI, and the runtime files are in "share/jolivim".
+Use "jvim -v" to stay in the terminal.  "make install-jvim-term" adds the
+optional "jvim-term" command for that.
 
 The header bar and the dialogs use the dark or light style of the desktop, or
 the dark style with the "d" flag in 'guioptions'.  The text area does not

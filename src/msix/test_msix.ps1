@@ -8,7 +8,7 @@
 #
 # With -StagingDir (the directory filled by make_msix.ps1) or -Package (a
 # .msix file, unpacked with makeappx.exe), also checks the content of the
-# built package and runs the packaged vim.exe, when present, to check that it
+# built package and runs the packaged jvim-term.exe, when present, to check that it
 # finds its runtime files and its translated messages.
 #
 # Exits with 1 when a check fails.
@@ -147,7 +147,7 @@ $inScript = @([regex]::Matches($script, '\.Replace\("(@[A-Z]+@)"') |
 Check (-not (Compare-Object $inTmpl $inScript)) `
       "placeholders differ: template has $($inTmpl -join ' '), make_msix.ps1 fills $($inScript -join ' ')"
 
-# The pattern that removes vim.exe from the manifest is the one used here.
+# The pattern that removes jvim-term.exe from the manifest is the one used here.
 Check ($script.Contains("'(?s)\s*<!-- BEGIN vim -->.*?<!-- END vim -->'")) `
       "make_msix.ps1 does not remove the vim block with the expected pattern"
 Check (([regex]::Matches($tmpl, '<!-- BEGIN vim -->')).Count -eq 1 -and
@@ -155,15 +155,15 @@ Check (([regex]::Matches($tmpl, '<!-- BEGIN vim -->')).Count -eq 1 -and
       "the template must have exactly one BEGIN vim / END vim block"
 
 # The filled manifest is valid XML, with and without the Windows App Runtime
-# and vim.exe, and has the expected applications.
+# and jvim-term.exe, and has the expected applications.
 foreach ($withDeps in $true, $false) {
   foreach ($withVim in $true, $false) {
-    $what = "manifest (WinUI=$withDeps, vim.exe=$withVim)"
+    $what = "manifest (WinUI=$withDeps, jvim-term.exe=$withVim)"
     $doc = Parse-Xml (Fill-Manifest $tmpl $withDeps $withVim) $what
     if (-not $doc) { continue }
     $ns = Get-Ns $doc
     $ids = @($doc.SelectNodes("//f:Application/@Id", $ns) | ForEach-Object { $_.Value })
-    $expected = if ($withVim) { @("jvim", "vim", "settings") } else { @("jvim", "settings") }
+    $expected = if ($withVim) { @("jvim", "jvimterm", "settings") } else { @("jvim", "settings") }
     Check (($ids -join ' ') -eq ($expected -join ' ')) `
           "$what has applications $($ids -join ' '), expected $($expected -join ' ')"
     $deps = $doc.SelectNodes("//f:Dependencies/f:PackageDependency", $ns).Count
@@ -244,9 +244,9 @@ Check ($classes.Count -eq 1 -and $classes[0] -eq $clsid) `
       "COM server classes ($($classes -join ' ')) differ from JvimExt11 $clsid"
 
 # Each file referenced by the manifest is copied by make_msix.ps1: jvim.exe
-# and vim.exe from -Files, the others explicitly.
+# and jvim-term.exe from -Files, the others explicitly.
 foreach ($f in Get-ManifestFiles $doc) {
-  if ($f -eq "jvim.exe" -or $f -eq "vim.exe") { continue }
+  if ($f -eq "jvim.exe" -or $f -eq "jvim-term.exe") { continue }
   Check ($script.Contains("`"$f`"")) "$f is in the manifest but not copied by make_msix.ps1"
 }
 
@@ -273,15 +273,15 @@ if (-not $StagingDir) {
     $built = Parse-Xml $text "built manifest"
     if ($built) {
       $bns = Get-Ns $built
-      $hasVim = Test-Path "$StagingDir\vim.exe"
+      $hasVim = Test-Path "$StagingDir\jvim-term.exe"
 
       # The files referenced by the manifest are in the package.
       foreach ($f in Get-ManifestFiles $built) {
         Check (Test-Path (Join-Path $StagingDir $f)) "$f is in the manifest but not in the package"
       }
       $ids = @($built.SelectNodes("//f:Application/@Id", $bns) | ForEach-Object { $_.Value })
-      Check (($ids -contains "vim") -eq $hasVim) `
-            "application ""vim"" in the manifest: $($ids -contains 'vim'), vim.exe in the package: $hasVim"
+      Check (($ids -contains "jvimterm") -eq $hasVim) `
+            "application ""jvimterm"" in the manifest: $($ids -contains 'jvimterm'), jvim-term.exe in the package: $hasVim"
 
       # The runtime files, the translations and the licenses.
       foreach ($f in "LICENSE", "resources.pri", "defaults.vim", "vimrc_example.vim",
@@ -316,13 +316,13 @@ if (-not $StagingDir) {
             "package version $ver differs from jvim.exe $($fv.FileVersion)"
       Check ($ver.Build -gt 0) "package version $ver has no patch level"
 
-      # The packaged vim.exe finds its runtime files at the root of the
+      # The packaged jvim-term.exe finds its runtime files at the root of the
       # package, without $VIM and $VIMRUNTIME, and its French messages.
       $hostMachine = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { 0xAA64 } else { 0x8664 }
       if (-not $hasVim) {
-        Skip "vim.exe is not in the package (build with VIMDLL=yes), not run"
+        Skip "jvim-term.exe is not in the package (build with VIMDLL=yes), not run"
       } elseif ($machine -ne $hostMachine) {
-        Skip "vim.exe is for $arch, not run on this machine"
+        Skip "jvim-term.exe is for $arch, not run on this machine"
       } else {
         $out = Join-Path ([IO.Path]::GetTempPath()) ("test_msix_" + [guid]::NewGuid() + ".txt")
         $saved = @{}
@@ -333,21 +333,21 @@ if (-not $StagingDir) {
         $env:LANG = "fr"
         try {
           $outVim = $out.Replace("\", "/")
-          & "$StagingDir\vim.exe" --clean -es -N `
+          & "$StagingDir\jvim-term.exe" --clean -es -N `
               -c "try | NotACommand | catch | let g:err = v:exception | endtry" `
               -c "call writefile([`$VIMRUNTIME, filereadable(`$VIMRUNTIME . '/defaults.vim'), g:err], '$outVim')" `
               -c "qa!" | Out-Null
-          Check ($LASTEXITCODE -eq 0) "packaged vim.exe exited with $LASTEXITCODE"
+          Check ($LASTEXITCODE -eq 0) "packaged jvim-term.exe exited with $LASTEXITCODE"
           if (Test-Path $out) {
             $lines = @(Get-Content -Encoding UTF8 $out)
             $root = (Resolve-Path $StagingDir).Path.TrimEnd('\')
             Check ($lines[0].Replace('/', '\').TrimEnd('\') -eq $root) `
-                  "packaged vim.exe uses `$VIMRUNTIME $($lines[0]), expected $root"
-            Check ($lines[1] -eq "1") "packaged vim.exe cannot read `$VIMRUNTIME/defaults.vim"
+                  "packaged jvim-term.exe uses `$VIMRUNTIME $($lines[0]), expected $root"
+            Check ($lines[1] -eq "1") "packaged jvim-term.exe cannot read `$VIMRUNTIME/defaults.vim"
             Check ($lines[2] -match '^Vim:E492:' -and $lines[2] -notmatch 'Not an editor command') `
-                  "packaged vim.exe does not show French messages: $($lines[2])"
+                  "packaged jvim-term.exe does not show French messages: $($lines[2])"
           } else {
-            Check $false "packaged vim.exe did not write $out"
+            Check $false "packaged jvim-term.exe did not write $out"
           }
         } finally {
           foreach ($v in $saved.Keys) { [Environment]::SetEnvironmentVariable($v, $saved[$v]) }

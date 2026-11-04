@@ -201,8 +201,8 @@ if ($WinUIInclude) {
 }
 $manifest = $manifest.Replace("@DEPENDENCIES@", $deps)
 
-if ((Split-Path -Leaf $fileList) -notcontains "vim.exe") {
-  Write-Warning "vim.exe is not built (use VIMDLL=yes), no ""vim"" command"
+if ((Split-Path -Leaf $fileList) -notcontains "jvim-term.exe") {
+  Write-Warning "jvim-term.exe is not built (use VIMDLL=yes), no ""jvim-term"" command"
   $manifest = [regex]::Replace($manifest, '(?s)\s*<!-- BEGIN vim -->.*?<!-- END vim -->', '')
 }
 Set-Content -Encoding UTF8 -Path "$StagingDir\AppxManifest.xml" -Value $manifest

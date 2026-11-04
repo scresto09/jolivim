@@ -653,6 +653,8 @@ INSTALL_LANGS
 TAGPRG
 GUI_X_LIBS
 GUITYPE
+UNINSTALL_TARGET
+VIMDIRNAME
 GUI_LIB_LOC
 GUI_INC_LOC
 NARROW_PROTO
@@ -11115,6 +11117,7 @@ printf "%s\n" "yes" >&6; }
           GTK_LIBNAME="$GTK_LIBNAME `$PKG_CONFIG --libs libadwaita-1`"
           printf "%s\n" "#define USE_LIBADWAITA 1" >>confdefs.h
 
+          use_libadwaita=yes
         else
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
@@ -12272,6 +12275,16 @@ fi
 
 if test -z "$SKIP_PHOTON"; then
   GUITYPE=PHOTONGUI
+fi
+
+
+
+VIMDIRNAME=/vim
+UNINSTALL_TARGET=uninstall_normal
+if test "x$use_libadwaita" = "xyes"; then
+  GUITYPE=ADWAITA
+  VIMDIRNAME=/jolivim
+  UNINSTALL_TARGET=uninstall_jolivim
 fi
 
 

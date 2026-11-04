@@ -3083,6 +3083,7 @@ if test -z "$SKIP_GTK4"; then
           GUI_INC_LOC="$GUI_INC_LOC `$PKG_CONFIG --cflags libadwaita-1`"
           GTK_LIBNAME="$GTK_LIBNAME `$PKG_CONFIG --libs libadwaita-1`"
           AC_DEFINE(USE_LIBADWAITA)
+          use_libadwaita=yes
         else
           AC_MSG_RESULT(no)
           AC_MSG_ERROR([libadwaita-1 >= 1.5 not found])
@@ -3497,6 +3498,17 @@ fi
 
 AC_SUBST(GUI_INC_LOC)
 AC_SUBST(GUI_LIB_LOC)
+dnl JoliVIM for GNOME is installed next to Vim, under its own names.
+VIMDIRNAME=/vim
+UNINSTALL_TARGET=uninstall_normal
+if test "x$use_libadwaita" = "xyes"; then
+  GUITYPE=ADWAITA
+  VIMDIRNAME=/jolivim
+  UNINSTALL_TARGET=uninstall_jolivim
+fi
+AC_SUBST(VIMDIRNAME)
+AC_SUBST(UNINSTALL_TARGET)
+
 AC_SUBST(GUITYPE)
 AC_SUBST(GUI_X_LIBS)
 

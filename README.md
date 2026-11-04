@@ -1,8 +1,13 @@
 # JoliVIM
 
 **JoliVIM** is a playful fork of [Vim](https://www.vim.org), made for fun by
-**Sylvain Cresto**, with the help of Claude Opus. It specializes Vim's Windows GUI (the `jvim` binary) for **Windows 11**,
-giving it a modern **WinUI 3** look while staying 100% Vim underneath.
+**Sylvain Cresto**, with the help of Claude Opus. It gives Vim a modern, native
+look on two desktops, while staying 100% Vim underneath:
+
+- **Windows 11**, with a **WinUI 3** GUI;
+- **Linux with GNOME**, with a **GTK 4 and libadwaita** GUI.
+
+On both of them the command is `jvim`, which starts the GUI.
 
 It is **open source and freely distributable**, making Vim look as good as it
 edits, just my personal opinion, of course :-)
@@ -10,8 +15,10 @@ edits, just my personal opinion, of course :-)
 JoliVIM is an **independent project and is not affiliated with the Vim
 project**.
 
-Download it from the Microsoft Store:
+Windows version: download it from the Microsoft Store:
 <https://apps.microsoft.com/detail/9n2288l1n1fj>
+
+Linux version: there is no package yet, build it from source (see below).
 
 Repository: <https://github.com/scresto09/jolivim>
 
@@ -26,7 +33,9 @@ For issues, please visit <https://github.com/scresto09/jolivim/issues>
 
 The original Vim README.md has been renamed to [README.VIM.md](README.VIM.md).
 
-All of this is Windows-only and enabled through the `FEAT_WINUI` build flag:
+### Windows 11
+
+Enabled through the `FEAT_WINUI` build flag:
 
 - **Tabs in the title bar** (like Notepad), with a per-tab right-click menu
   (New tab / Close tab / Close other tabs / Close tabs to the right / Copy file
@@ -42,15 +51,34 @@ All of this is Windows-only and enabled through the `FEAT_WINUI` build flag:
 - **Light / dark theme that follows the Windows setting** (title bar, tabs,
   menu, toolbar, scroll bars, dialogs), switching live.
 - **"Copy file name"** from the status-line right-click menu.
+- **One dialog to save changes**: when several files are modified, a single
+  dialog lists them with a check box to select the ones to save.
 - **The GUI binary is renamed `jvim.exe`** (`jvimd.exe` for a debug build),
   instead of `gvim.exe`.
 
 Everything gracefully **falls back to the classic Win32 UI** when the WinUI
 runtime is not available.
 
+### Linux with GNOME
+
+Enabled with the `--with-libadwaita` configure option:
+
+- **Header bar** with buttons for recent files, a new tab, the buffer
+  properties and the main menu.
+- **Tab bar and dialogs** like GNOME applications.
+- **One dialog to save changes**, like on Windows.
+- **Different defaults**: no menu bar or toolbar, the menus are in the main
+  menu of the header bar, and the right mouse button opens a popup menu.
+- **Its own installation**: the `jvim` command, the runtime files in
+  `share/jolivim` and its own desktop entry and icon.
+
+### Translations
+
+French translation included.
+
 ---
 
-## Prerequisites
+## Prerequisites on Windows
 
 - **Windows 11** (Windows 10 may work but is not the target).
 - **Visual Studio** with the MSVC C++ toolchain (the WinUI code is C++/WinRT and
@@ -75,7 +103,7 @@ adapted for this version.
 
 ---
 
-## Building
+## Building on Windows
 
 From a **Visual Studio x64 Native Tools** command prompt, in `src/`:
 
@@ -91,17 +119,21 @@ nmake -f Make_mvc.mak GUI=yes WINUI=yes DEBUG=yes
 
 `WINUI=yes` requires `GUI=yes`. Omitting `WINUI=yes` builds a plain Win32 Vim GUI.
 
+Only `jvim.exe` is built by default. Add `VIMDLL=yes` to also get the console
+version, `jvim-term.exe`, with `jvim64.dll` (`jvim64d.dll` for a debug build)
+next to it.
+
 The runtime files (`joli.png`, the modified
 `menu.vim`, …) must be reachable through `'runtimepath'` (e.g. `$VIMRUNTIME`).
 
 ### MSIX package
 
-The whole JoliVIM (jvim, vim, the runtime files and the "Edit in JoliVIM" entry
+The whole JoliVIM (jvim, the runtime files and the "Edit in JoliVIM" entry
 of the Windows 11 context menu) can be packaged as a single MSIX, without
 installer, e.g. for the Microsoft Store:
 
 ```
-nmake -f Make_mvc.mak GUI=yes WINUI=yes VIMDLL=yes msix
+nmake -f Make_mvc.mak GUI=yes WINUI=yes msix
 ```
 
 This needs `makeappx.exe` and `makepri.exe` from the Windows SDK and creates
@@ -113,13 +145,14 @@ so the package is ready to upload as is; override it with `MSIX_NAME=`,
 `PUBLISHER=` and `MSIX_PUBLISHERNAME=` if needed (e.g. for a self-signed test
 build, set `PUBLISHER=` to the test certificate's subject).
 To test it without signing, enable the Developer Mode and register the staging
-directory (in the object directory, here `ObjDXWAMD64`):
+directory (in the object directory, here `ObjGXWAMD64`):
 
 ```
-Add-AppxPackage -Register ObjDXWAMD64\msix\AppxManifest.xml
+Add-AppxPackage -Register ObjGXWAMD64\msix\AppxManifest.xml
 ```
 
-`jvim` and `vim` are then available in a command prompt.  The package depends
+`jvim` is then available in a command prompt, and `jvim-term` too when built
+with `VIMDLL=yes`.  The package depends
 on the Windows App Runtime used for building: the Store installs it, otherwise
 it must already be installed.  See `src/msix/make_msix.ps1`.
 
@@ -130,6 +163,28 @@ translations of `src/po` to `lang/<language>/LC_MESSAGES/vim.mo`. The DLLs come 
 [gettext-iconv-windows](https://github.com/mlocati/gettext-iconv-windows) for
 x64 and from the MSYS2 `clangarm64` packages for arm64. Only x64 and arm64 are
 supported, there is no 32-bit package.
+
+---
+
+## Building on Linux with GNOME
+
+This requires GTK 4 and libadwaita 1.5 or later. On Debian or Ubuntu:
+
+```
+sudo apt install libadwaita-1-dev
+```
+
+In `src/`:
+
+```
+./configure --enable-gui=gtk4 --with-libadwaita
+make
+sudo make install
+```
+
+This installs the `jvim` command, which starts the GUI. `jvim -v` stays in the terminal; `sudo make install-jvim-term` adds the
+optional `jvim-term` command for that.
+Remove JoliVIM with `sudo make uninstall`. See `:help gtk4-libadwaita`.
 
 ---
 

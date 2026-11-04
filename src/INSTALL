@@ -77,7 +77,9 @@ To build Vim on Ubuntu from scratch on a clean system using git:
 
 	Add libadwaita support to the GTK4 GUI:
 	% sudo apt install libadwaita-1-dev
-	(Configure with --enable-gui=gtk4 --with-libadwaita.)
+	(Configure with --enable-gui=gtk4 --with-libadwaita.  This builds
+	JoliVIM: "make install" installs "jvim" next to Vim, see
+	":help gtk4-libadwaita".)
 	% make reconfig
 
 	Add Python 3 support:

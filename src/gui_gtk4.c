@@ -516,7 +516,11 @@ gui_mch_init_check(void)
     // shipped gvim.desktop so that Vim's windows can be associated with this
     // file.  Also sets WM_CLASS on X11. If "--prg-name" is specified, then use
     // that.
+# ifdef USE_LIBADWAITA
+    g_set_prgname(prgname == NULL ? "jvim" : prgname);
+# else
     g_set_prgname(prgname == NULL ? "gvim" : prgname);
+# endif
 
     // Suppress noisy EGL warnings when GL is not available.  Only set
     // this when actually starting the GUI, so non-GUI invocations are

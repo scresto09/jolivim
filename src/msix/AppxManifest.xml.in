@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Manifest of the MSIX package of the whole Vim: jvim.exe, vim.exe, the
+  Manifest of the MSIX package of the whole Vim: jvim.exe, jvim-term.exe, the
   runtime files and the Windows 11 context menu entry (JvimExt11).  Unlike
   JvimExt11\AppxManifest.xml.in (a package with external location, added to
   a Vim installed by the installer), this package contains all the files and
@@ -17,8 +17,8 @@
     @ARCH@               x64 or arm64, like jvim.exe
     @DEPENDENCIES@       the Windows App Runtime, when built with WINUI=yes
   and removes the block between the "BEGIN vim" and "END vim" comments when
-  vim.exe was not built (build with VIMDLL=yes to get both jvim.exe and
-  vim.exe).
+  jvim-term.exe was not built (build with VIMDLL=yes to get both jvim.exe and
+  jvim-term.exe).
 
   The texts "ms-resource:<name>" are translated in msix\Strings\<language>\
   Resources.resw and the logos have variants for each scale and size in
@@ -146,18 +146,18 @@
       </Extensions>
     </Application>
     <!-- BEGIN vim -->
-    <!-- "vim" in a command prompt.  Not in the Start menu. -->
-    <Application Id="vim" Executable="vim.exe"
+    <!-- "jvim-term" in a command prompt.  Not in the Start menu. -->
+    <Application Id="jvimterm" Executable="jvim-term.exe"
                  EntryPoint="Windows.FullTrustApplication">
-      <uap:VisualElements AppListEntry="none" DisplayName="Vim (console)"
-                          Description="Vim in the console"
+      <uap:VisualElements AppListEntry="none" DisplayName="JoliVIM (console)"
+                          Description="JoliVIM in the console"
                           BackgroundColor="transparent"
                           Square150x150Logo="msix\JoliVIM150x150Logo.png"
                           Square44x44Logo="msix\JoliVIM44x44Logo.png" />
       <Extensions>
         <uap5:Extension Category="windows.appExecutionAlias">
           <uap5:AppExecutionAlias desktop4:Subsystem="console">
-            <uap5:ExecutionAlias Alias="vim.exe" />
+            <uap5:ExecutionAlias Alias="jvim-term.exe" />
           </uap5:AppExecutionAlias>
         </uap5:Extension>
       </Extensions>
