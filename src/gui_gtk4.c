@@ -234,6 +234,11 @@ modifiers_gdk2vim(guint state)
 }
 
 static GtkWidget *vbox;		// the main vertical box
+#ifdef USE_LIBADWAITA
+static GtkWidget *error_banner = NULL;	    // banner for startup errors
+static GtkWidget *error_banner_label = NULL;
+static void error_banner_create(void);
+#endif
 
 // Forward declarations for event callbacks
 static gboolean key_press_event(GtkEventControllerKey *controller, guint keyval, guint keycode, GdkModifierType state, gpointer data);
@@ -744,6 +749,9 @@ gui_mch_init(void)
     gtk_widget_set_name(gui.formwin, "vim-gtk-form");
     gtk_widget_set_vexpand(gui.formwin, TRUE);
     gtk_widget_set_hexpand(gui.formwin, TRUE);
+#ifdef USE_LIBADWAITA
+    error_banner_create();
+#endif
     gtk_box_append(GTK_BOX(vbox), gui.formwin);
 
     // The drawing area for the editor content.
@@ -1271,6 +1279,70 @@ gui_mch_show_toolbar(int showit)
 #endif
 
 #ifdef USE_LIBADWAITA
+    static void
+error_banner_view_cb(GtkButton *button UNUSED, gpointer data UNUSED)
+{
+    add_to_input_buf((char_u *)"\034\016:messages\r", 12);
+}
+
+    static void
+error_banner_close_cb(GtkButton *button UNUSED, gpointer data UNUSED)
+{
+    gtk_widget_set_visible(error_banner, FALSE);
+}
+
+/*
+ * Create the banner for startup errors, above the text.  It is hidden.
+ */
+    static void
+error_banner_create(void)
+{
+    GtkWidget *icon = gtk_image_new_from_icon_name("dialog-error-symbolic");
+    GtkWidget *view = gtk_button_new_with_label(_("View"));
+    GtkWidget *close = gtk_button_new_from_icon_name("window-close-symbolic");
+
+    error_banner = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    gtk_widget_add_css_class(error_banner, "toolbar");
+    gtk_widget_add_css_class(icon, "error");
+    gtk_box_append(GTK_BOX(error_banner), icon);
+
+    error_banner_label = gtk_label_new(NULL);
+    gtk_widget_set_hexpand(error_banner_label, TRUE);
+    gtk_label_set_xalign(GTK_LABEL(error_banner_label), 0.0);
+    gtk_label_set_ellipsize(GTK_LABEL(error_banner_label),
+							PANGO_ELLIPSIZE_END);
+    gtk_box_append(GTK_BOX(error_banner), error_banner_label);
+
+    g_signal_connect(view, "clicked", G_CALLBACK(error_banner_view_cb), NULL);
+    gtk_box_append(GTK_BOX(error_banner), view);
+
+    gtk_widget_add_css_class(close, "flat");
+    gtk_widget_set_tooltip_text(close, _("Close"));
+    g_signal_connect(close, "clicked", G_CALLBACK(error_banner_close_cb), NULL);
+    gtk_box_append(GTK_BOX(error_banner), close);
+
+    gtk_widget_set_visible(error_banner, FALSE);
+    gtk_box_append(GTK_BOX(vbox), error_banner);
+}
+
+/*
+ * Show "text" in the banner above the text.
+ */
+    int
+gui_mch_show_banner(char_u *text)
+{
+    char_u *utf8;
+
+    if (error_banner == NULL)
+	return FAIL;
+    utf8 = CONVERT_TO_UTF8(text);
+    gtk_label_set_text(GTK_LABEL(error_banner_label), (const char *)utf8);
+    gtk_widget_set_tooltip_text(error_banner_label, (const char *)utf8);
+    CONVERT_TO_UTF8_FREE(utf8);
+    gtk_widget_set_visible(error_banner, TRUE);
+    return OK;
+}
+
 /*
  * Return TRUE when the GUI uses the dark theme, for has("gui_dark").
  */

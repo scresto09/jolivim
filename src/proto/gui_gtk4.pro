@@ -26,6 +26,7 @@ void gui_mch_set_shellsize(int width, int height, int min_width, int min_height,
 void gui_mch_get_screen_dimensions(int *screen_w, int *screen_h);
 void gui_mch_enable_menu(int showit);
 void gui_mch_show_toolbar(int showit);
+int gui_mch_show_banner(char_u *text);
 int gui_mch_is_dark(void);
 void gui_mch_set_dark_theme(int dark);
 int gui_mch_adjust_charheight(void);

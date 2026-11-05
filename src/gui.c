@@ -219,9 +219,16 @@ gui_attempt_start(void)
 	if (gui_get_x11_windis(&x11_window, &x11_display) == OK)
 	    set_vim_var_nr(VV_WINDOWID, (long)x11_window);
 # endif
+# ifndef USE_LIBADWAITA
 	// Display error messages in a dialog now.
 	display_errors();
+# endif
     }
+#endif
+#if defined(FEAT_WINUI) || defined(USE_LIBADWAITA)
+    // At startup main() does this when the window is ready.
+    if (starting == 0)
+	gui_show_startup_errors();
 #endif
     --recursive;
 }
@@ -5292,17 +5299,118 @@ gui_find_iconfile(char_u *name, char_u *buffer, char *ext)
 # endif
 #endif
 
+#if defined(FEAT_WINUI) || defined(USE_LIBADWAITA)
+/*
+ * Show the errors collected while the window was not open, such as those of a
+ * vimrc or gvimrc, in a banner in the window, without blocking the user.  The
+ * complete text goes to the message history.
+ */
+    void
+gui_show_startup_errors(void)
+{
+    char_u	*text;
+    char_u	*line;
+    char_u	*next;
+    char_u	*first = NULL;
+    int		count = 0;
+    int		save_need_wait_return;
+    int		save_msg_didany;
+
+    if (error_ga.ga_data == NULL)
+	return;
+    if (!gui.in_use)
+    {
+# ifdef USE_LIBADWAITA
+	// Without the window errors go to the terminal.
+	fputs((char *)error_ga.ga_data, stderr);
+	ga_clear(&error_ga);
+# endif
+	return;
+    }
+    // --gui-dialog-file: write the text to a file.
+    if (get_gui_dialog_file() != NULL)
+    {
+	display_errors();
+	return;
+    }
+    text = vim_strsave((char_u *)error_ga.ga_data);
+    if (text == NULL)
+	return;
+
+    // Summary: the first error, or the first line when there is no error
+    // number.
+    for (line = text; *line != NUL; line = next)
+    {
+	next = vim_strchr(line, '\n');
+	next = next == NULL ? line + STRLEN(line) : next + 1;
+	if (line[0] == 'E' && VIM_ISDIGIT(line[1]))
+	{
+	    if (count++ == 0)
+		first = line;
+	}
+	else if (first == NULL && count == 0 && *skipwhite(line) != NUL
+						    && *skipwhite(line) != '\n')
+	    first = line;
+    }
+    if (first == NULL)
+    {
+	// Only white space.
+	ga_clear(&error_ga);
+	vim_free(text);
+	return;
+    }
+    if (count == 0)
+	count = 1;
+    next = vim_strchr(first, '\n');
+    if (next != NULL)
+	*next = NUL;
+    vim_snprintf((char *)IObuff, IOSIZE,
+	    NGETTEXT("%d error at startup: %s", "%d errors at startup: %s",
+							count), count, first);
+    if (next != NULL)
+	*next = '\n';
+
+    if (gui_mch_show_banner(IObuff) == FAIL)
+    {
+	display_errors();
+	vim_free(text);
+	return;
+    }
+    ga_clear(&error_ga);
+
+    save_need_wait_return = need_wait_return;
+    save_msg_didany = msg_didany;
+    ++msg_silent;
+    for (line = text; *line != NUL; line = next)
+    {
+	next = vim_strchr(line, '\n');
+	if (next == NULL)
+	    next = line + STRLEN(line);
+	else
+	    *next++ = NUL;
+	if (*line != NUL)
+	    msg_attr((char *)line, HL_ATTR(HLF_E));
+    }
+    --msg_silent;
+    need_wait_return = save_need_wait_return;
+    msg_didany = save_msg_didany;
+    vim_free(text);
+}
+#endif
+
 #if defined(FEAT_GUI_GTK) || defined(FEAT_GUI_X11)|| defined(FEAT_GUI_HAIKU)
     void
 display_errors(void)
 {
     char_u	*p;
 
+# ifndef USE_LIBADWAITA
     if (isatty(2))
     {
 	fflush(stderr);
 	return;
     }
+# endif
 
     if (error_ga.ga_data == NULL)
 	return;

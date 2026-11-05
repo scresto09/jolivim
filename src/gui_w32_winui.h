@@ -18,6 +18,7 @@ void winui_free_items(WinUIMenuItem *items, int count);
 int winui_tabline_popup(POINT pt);
 int winui_dialog(char_u *title, char_u *message, char_u *buttons,
 	int dfltbutton, char_u *textfield);
+void winui_banner_reposition(void);
 char_u *winui_browse(int saving, char_u *title, char_u *dflt, char_u *ext,
 	char_u *initdir, char_u *filter, int *ok);
 # ifdef MSWIN_FIND_REPLACE

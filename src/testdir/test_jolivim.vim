@@ -110,4 +110,47 @@ func Test_dark_colorscheme_switch()
   call delete('Xcolors')
 endfunc
 
+" Errors in a gvimrc don't block starting the GUI and are in the messages.
+func Test_startup_error_banner()
+  CheckFeature gui_adwaita
+  CheckCanRunGui
+
+  call writefile(['thisisnotacommand'], 'Xgvimrc', 'D')
+  let lines =<< trim END
+    call writefile([execute('messages')], 'Xcolors')
+    qa!
+  END
+  call writefile(lines, 'Xcolors.vim', 'D')
+  call delete('Xcolors')
+  " Without --gui-dialog-file, that uses a dialog instead of the banner.
+  let cmd = substitute(GetVimCommand(), '--gui-dialog-file \S\+', '', 'g')
+  call system(cmd .. ' -g -f -u NORC -N -U Xgvimrc -S Xcolors.vim')
+  call WaitForAssert({-> assert_true(filereadable('Xcolors'))})
+  call assert_match('E492', readfile('Xcolors')->join())
+  call delete('Xcolors')
+endfunc
+
+" Started from a terminal, errors in a gvimrc don't go to that terminal.
+func Test_startup_error_not_in_terminal()
+  CheckFeature gui_adwaita
+  CheckFeature terminal
+  CheckCanRunGui
+
+  call writefile(['thisisnotacommand'], 'Xgvimrc', 'D')
+  let lines =<< trim END
+    call writefile([execute('messages')], 'Xcolors')
+    qa!
+  END
+  call writefile(lines, 'Xcolors.vim', 'D')
+  call delete('Xcolors')
+  let cmd = substitute(GetVimCommand(), '--gui-dialog-file \S\+', '', 'g')
+  let buf = term_start(cmd .. ' -g -f -u NORC -N -U Xgvimrc -S Xcolors.vim')
+  call WaitForAssert({-> assert_true(filereadable('Xcolors'))})
+  call WaitForAssert({-> assert_equal('finished', term_getstatus(buf))})
+  call assert_match('E492', readfile('Xcolors')->join())
+  call assert_notmatch('E492', term_getline(buf, 1) .. term_getline(buf, 2))
+  call delete('Xcolors')
+  exe buf .. 'bwipe!'
+endfunc
+
 " vim: shiftwidth=2 sts=2 expandtab

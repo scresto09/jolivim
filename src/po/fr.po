@@ -12076,3 +12076,13 @@ msgstr "Abandonner toutes les modifications ?"
 
 msgid "&Cancel\n&Discard Changes"
 msgstr "&Annuler\nA&bandonner les modifications"
+
+# JoliVIM: banner for startup errors (gui.c)
+
+msgid "%d error at startup: %s"
+msgid_plural "%d errors at startup: %s"
+msgstr[0] "%d erreur au démarrage : %s"
+msgstr[1] "%d erreurs au démarrage : %s"
+
+msgid "View"
+msgstr "Voir"

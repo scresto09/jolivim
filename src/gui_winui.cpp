@@ -571,6 +571,12 @@ muxc::ToggleMenuFlyoutItem s_match_case{nullptr};
 muxc::ToggleMenuFlyoutItem s_whole_word{nullptr};
 muxc::FontIcon s_expand_icon{nullptr};
 HWND s_findbar_hwnd = NULL;
+
+// Error banner at the top of the text area.
+muxh::DesktopWindowXamlSource s_banner_source{nullptr};
+muxc::Grid s_banner_root{nullptr};
+muxc::InfoBar s_banner{nullptr};
+HWND s_banner_hwnd = NULL;
 int s_findbar_left = 0, s_findbar_top = 0, s_findbar_width = 0;
 std::vector<winrt::hstring> s_find_history;
 
@@ -866,6 +872,9 @@ WinUI_Final(void)
     winrt::detach_abi(s_findbar_card);
     winrt::detach_abi(s_findbar_root);
     winrt::detach_abi(s_findbar_source);
+    winrt::detach_abi(s_banner_source);
+    winrt::detach_abi(s_banner_root);
+    winrt::detach_abi(s_banner);
     winrt::detach_abi(s_dialog_root);
     winrt::detach_abi(s_dialog_source);
     winrt::detach_abi(s_tabdrag);
@@ -1575,6 +1584,107 @@ WinUI_ShowFindBar(HWND hwnd, const WCHAR *text, int replace,
         return FALSE;
     }
     return TRUE;
+}
+
+/*
+ * Show an error banner over the top of the text area, with a button to view
+ * the messages and a button to close it.  Returns FALSE when it can't be shown.
+ */
+    int
+WinUI_ShowBanner(HWND hwnd, const WCHAR *message, const WCHAR *view_label,
+        int left, int top, int width)
+{
+    if (!ensure_init(hwnd))
+        return FALSE;
+    try
+    {
+        if (!s_banner_source)
+        {
+            s_banner_source = muxh::DesktopWindowXamlSource();
+            s_banner_source.Initialize(
+                            winrt::Microsoft::UI::GetWindowIdFromWindow(hwnd));
+            s_banner_root = muxc::Grid();
+            s_banner = muxc::InfoBar();
+            s_banner.Severity(muxc::InfoBarSeverity::Error);
+            s_banner.IsClosable(true);
+
+            muxc::Button view;
+            view.Content(winrt::box_value(winrt::hstring(
+                                view_label != NULL ? view_label : L"View")));
+            view.Click([](wf::IInspectable const &,
+                                            mux::RoutedEventArgs const &)
+            {
+                gui_winui_banner_view();
+            });
+            s_banner.ActionButton(view);
+            s_banner.Closed([](muxc::InfoBar const &,
+                                    muxc::InfoBarClosedEventArgs const &)
+            {
+                s_banner_source.SiteBridge().Hide();
+            });
+            s_banner_root.Children().Append(s_banner);
+            s_banner_source.Content(s_banner_root);
+            s_banner_hwnd = winrt::Microsoft::UI::GetWindowFromWindowId(
+                                s_banner_source.SiteBridge().WindowId());
+        }
+        s_banner_root.RequestedTheme(winui_system_is_dark()
+                        ? mux::ElementTheme::Dark : mux::ElementTheme::Light);
+        s_banner.Message(message != NULL ? message : L"");
+        s_banner.IsOpen(true);
+        WinUI_BannerSetPos(left, top, width);
+        SetWindowPos(s_banner_hwnd, HWND_TOP, 0, 0, 0, 0,
+                                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+    catch (...)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+/*
+ * Position the banner at the top of the text area, as wide as the text area.
+ */
+    void
+WinUI_BannerSetPos(int left, int top, int width)
+{
+    if (!s_banner_source || width <= 0)
+        return;
+    try
+    {
+        float   inf = std::numeric_limits<float>::infinity();
+        double  scale = GetDpiForWindow(s_parent) / 96.0;
+        double  width_dip = width / scale;
+
+        s_banner_root.Width(width_dip);
+        s_banner_root.Measure(wf::Size{(float)width_dip, inf});
+        int     height = (int)(s_banner_root.DesiredSize().Height * scale + 0.99);
+        if (height <= 0)
+            height = (int)(48 * scale);
+
+        s_banner_source.SiteBridge().MoveAndResize(
+                winrt::Windows::Graphics::RectInt32{left, top, width, height});
+        s_banner_source.SiteBridge().Show();
+    }
+    catch (...)
+    {
+    }
+}
+
+/*
+ * Return TRUE when the banner is shown.
+ */
+    int
+WinUI_BannerVisible(void)
+{
+    try
+    {
+        return s_banner && s_banner.IsOpen();
+    }
+    catch (...)
+    {
+        return FALSE;
+    }
 }
 
 /*
@@ -2973,6 +3083,9 @@ WinUI_UpdateTheme(void)
             apply_findbar_theme();
         if (s_dialog_retheme)
             s_dialog_retheme(winui_system_is_dark());
+        if (s_banner_root)
+            s_banner_root.RequestedTheme(winui_system_is_dark()
+                        ? mux::ElementTheme::Dark : mux::ElementTheme::Light);
         s_tab_force_rebuild = true;
     }
     catch (...)

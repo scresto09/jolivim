@@ -188,6 +188,52 @@ winui_textarea_rect(int *left, int *top, int *width)
 }
 
 /*
+ * Show "text" in an error banner at the top of the text area.
+ * Returns FAIL when that is not possible.
+ */
+    int
+gui_mch_show_banner(char_u *text)
+{
+    int	    left, top, width;
+    int	    ret;
+    WCHAR   *wtext;
+    WCHAR   *wview;
+
+    if (s_hwnd == NULL || !IsWindowVisible(s_hwnd))
+	return FAIL;
+    winui_textarea_rect(&left, &top, &width);
+    wtext = (WCHAR *)enc_to_utf16(text, NULL);
+    wview = (WCHAR *)enc_to_utf16((char_u *)_("View"), NULL);
+    ret = WinUI_ShowBanner(s_hwnd, wtext, wview, left, top, width);
+    vim_free(wtext);
+    vim_free(wview);
+    return ret ? OK : FAIL;
+}
+
+/*
+ * The "View" button of the banner: show the messages.
+ */
+    void
+gui_winui_banner_view(void)
+{
+    add_to_input_buf((char_u *)"\034\016:messages\r", 12);
+}
+
+/*
+ * Reposition the banner when the text area moved or was resized.
+ */
+    void
+winui_banner_reposition(void)
+{
+    int	    left, top, width;
+
+    if (!WinUI_BannerVisible())
+	return;
+    winui_textarea_rect(&left, &top, &width);
+    WinUI_BannerSetPos(left, top, width);
+}
+
+/*
  * Reposition the find bar when the text area moved or was resized.
  */
     void
@@ -649,6 +695,11 @@ winui_dialog(
     WCHAR	*wfield = NULL;
     int		ret;
 
+    // A ContentDialog cannot be seen until the window is open, e.g. for errors
+    // in a vimrc or gvimrc, and waiting for it would hang.
+    if (!IsWindowVisible(s_hwnd))
+	return -1;
+
     for (p = buttons; *p != NUL; ++p)
 	if (*p == DLG_BUTTON_SEP)
 	    ++n;
@@ -755,7 +806,8 @@ gui_mch_dialog_changed(buf_T *buf)
     int		i;
 
     // Same conditions as do_dialog().
-    if (!gui.in_use || s_hwnd == NULL || get_gui_dialog_file() != NULL
+    if (!gui.in_use || s_hwnd == NULL || !IsWindowVisible(s_hwnd)
+				    || get_gui_dialog_file() != NULL
 				    || vim_strchr(p_go, GO_CONDIALOG) != NULL)
 	return FALSE;
 

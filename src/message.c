@@ -3620,6 +3620,10 @@ mch_errmsg(char *str)
 #  ifdef UNIX
 #   ifdef MACOS_X
 	    (isatty(2) && strcmp("/dev/console", ttyname(2)) != 0)
+#   elif defined(USE_LIBADWAITA)
+	    // Errors go to the banner in the window, see
+	    // gui_show_startup_errors().
+	    0
 #   else
 	    isatty(2)
 #   endif

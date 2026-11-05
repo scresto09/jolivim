@@ -1832,6 +1832,9 @@ gui_mch_set_text_area_pos(int x, int y, int w, int h)
 #if defined(FEAT_WINUI) && defined(MSWIN_FIND_REPLACE)
     winui_findbar_reposition();
 #endif
+#if defined(FEAT_WINUI)
+    winui_banner_reposition();
+#endif
 
 #ifdef FEAT_TOOLBAR
     if (vim_strchr(p_go, GO_TOOLBAR) != NULL)
@@ -7035,8 +7038,10 @@ gui_mch_init(void)
 #endif
 
 theend:
+# ifndef FEAT_WINUI
     // Display any pending error messages
     display_errors();
+# endif
 
     return OK;
 }

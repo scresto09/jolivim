@@ -733,6 +733,10 @@ vim_main2(void)
     settmode(TMODE_RAW);
     TIME_MSG("setting raw mode");
 
+#if defined(FEAT_GUI) && (defined(FEAT_WINUI) || defined(USE_LIBADWAITA))
+    gui_show_startup_errors();
+#endif
+
     if (need_wait_return || msg_didany)
     {
 	wait_return(TRUE);
@@ -1719,6 +1723,12 @@ getout_preserve_modified(int exitval)
     void
 getout(int exitval)
 {
+#ifdef USE_LIBADWAITA
+    // Don't lose errors when exiting before the window was opened.
+    if (!gui.in_use)
+	gui_show_startup_errors();
+#endif
+
     exiting = TRUE;
 #if defined(FEAT_EVAL)
     ch_log(NULL, "Exiting...");

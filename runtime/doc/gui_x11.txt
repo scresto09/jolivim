@@ -401,6 +401,11 @@ default 'guioptions' does not include "m" and "T" and in the GUI 'mousemodel'
 is "popup".  <F10> shows the whole menu of Vim, unless <F10> is mapped.  Use
 has("gui_adwaita") to check for this.
 
+							*jolivim-startup-errors*
+In JoliVIM, on Windows or with GNOME, errors in a vimrc or gvimrc are shown in
+a banner at the top of the window, which can be closed.  It shows the first
+error and a button to view all of them with |:messages|.
+
 							*jolivim-colorscheme*
 When JoliVIM is in dark mode, on Windows or with GNOME, the "onedark" color
 scheme is used.  It follows the desktop while Vim is running: in light mode
