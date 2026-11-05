@@ -1,0 +1,14 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: JoliVIM
+Source: https://github.com/scresto09/jolivim
+
+Files: *
+Copyright: Bram Moolenaar and the Vim contributors, Sylvain Cresto
+License: Vim
+ JoliVIM is distributed under the Vim license. The full text is in
+ /usr/share/jolivim/vim92/doc/uganda.txt, see ":help license".
+
+Files: runtime/colors/onedark.vim runtime/autoload/onedark.vim
+Copyright: 2015 Joshua Dick
+License: MIT
+ The full text of the license is at the top of these files.

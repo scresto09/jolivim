@@ -3165,7 +3165,9 @@ if test "x$GUITYPE" = "xGTK"; then
   else
     AC_MSG_RESULT([cannot obtain from pkg_config.])
   fi
+fi
 
+if test "x$GUITYPE" = "xGTK" -o "x$GUITYPE" = "xGTK4"; then
   AC_MSG_CHECKING([--disable-icon-cache-update argument])
   AC_ARG_ENABLE(icon_cache_update,
           [  --disable-icon-cache-update        update disabled],

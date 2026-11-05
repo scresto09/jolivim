@@ -110,6 +110,42 @@ func Test_dark_colorscheme_switch()
   call delete('Xcolors')
 endfunc
 
+" Variables for the GTK of a packaged JoliVIM are not for the programs it starts.
+func Test_child_env_restored()
+  CheckFeature gui_adwaita
+  CheckUnix
+
+  let $JVIM_CHILD_UNSET = 'XJV_GONE XJV_BACK'
+  let $XJV_GONE = 'gtk'
+  let $XJV_BACK = 'gtk'
+  let $JVIM_ORIG_XJV_BACK = 'system'
+  let $XJV_OTHER = 'kept'
+  let cmd = 'echo "[$XJV_GONE][$XJV_BACK][$XJV_OTHER][$JVIM_CHILD_UNSET][$JVIM_ORIG_XJV_BACK]"'
+  let expected = "[][system][kept][][]\n"
+  try
+    " Through the shell, directly and with a job.
+    call assert_equal(expected, system(cmd))
+    call assert_equal(expected, system(['sh', '-c', cmd]))
+    let out = []
+    let job = job_start(['sh', '-c', cmd], #{out_cb: {c, m -> add(out, m)}})
+    call WaitForAssert({-> assert_equal([trim(expected)], out)})
+    call job_stop(job)
+
+    " A value given for the job is used.
+    let out = []
+    let job = job_start(['sh', '-c', 'echo "$XJV_GONE"'],
+	  \ #{env: #{XJV_GONE: 'mine'}, out_cb: {c, m -> add(out, m)}})
+    call WaitForAssert({-> assert_equal(['mine'], out)})
+    call job_stop(job)
+
+    " JoliVIM itself still has them.
+    call assert_equal('gtk', $XJV_GONE)
+    call assert_equal('gtk', $XJV_BACK)
+  finally
+    unlet $JVIM_CHILD_UNSET $XJV_GONE $XJV_BACK $JVIM_ORIG_XJV_BACK $XJV_OTHER
+  endtry
+endfunc
+
 " Errors in a gvimrc don't block starting the GUI and are in the messages.
 func Test_startup_error_banner()
   CheckFeature gui_adwaita

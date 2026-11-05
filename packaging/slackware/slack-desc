@@ -1,0 +1,19 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+       |-----handy-ruler------------------------------------------------------|
+jolivim: jolivim (Vim with a native GNOME interface)
+jolivim:
+jolivim: JoliVIM is a playful fork of Vim that gives it a modern, native look
+jolivim: with GTK 4 and libadwaita, while staying 100% Vim underneath.  The
+jolivim: "jvim" command starts the GUI.  It does not conflict with Vim.
+jolivim:
+jolivim: JoliVIM is an independent project and is not affiliated with the Vim
+jolivim: project.
+jolivim:
+jolivim: Homepage: https://github.com/scresto09/jolivim
+jolivim:

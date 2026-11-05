@@ -2416,12 +2416,19 @@ installjvimdesktop:
 	   $(MKDIR_P) $$d; \
 	   $(INSTALL_DATA) msix/Assets/JoliVIM44x44Logo.targetsize-$$s.png $$d/jvim.png; \
 	done
-	if test -z "$(DESTDIR)" -a -x "$(GTK_UPDATE_ICON_CACHE)" \
-		-a -w $(ICONTHEMEPATH) -a -f $(ICONTHEMEPATH)/index.theme; then \
-	   $(GTK_UPDATE_ICON_CACHE) -q $(ICONTHEMEPATH); \
-	fi
+	$(MAKE) -f Makefile updatejvimiconcache
 	if test -z "$(DESTDIR)" -a -x "$(UPDATE_DESKTOP_DATABASE)"; then \
 	   $(UPDATE_DESKTOP_DATABASE) -q $(DESKTOPPATH); \
+	fi
+
+# /usr/local usually has no index.theme, but an outdated cache hides new icons.
+updatejvimiconcache:
+	if test -z "$(DESTDIR)" -a -x "$(GTK_UPDATE_ICON_CACHE)" \
+		-a -w $(ICONTHEMEPATH); then \
+	   if test -f $(ICONTHEMEPATH)/index.theme \
+		-o -f $(ICONTHEMEPATH)/icon-theme.cache; then \
+	      $(GTK_UPDATE_ICON_CACHE) -q -f -t $(ICONTHEMEPATH); \
+	   fi; \
 	fi
 
 uninstall_jolivim:
@@ -2430,6 +2437,7 @@ uninstall_jolivim:
 	-for s in $(JVIM_ICONS); do \
 	   rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/$${s}x$${s}/apps/jvim.png; \
 	done
+	-$(MAKE) -f Makefile updatejvimiconcache
 	-rm -rf $(DEST_RT)
 	-find $(DEST_MAN_TOP) -name jvim.1 -exec rm -f {} +
 

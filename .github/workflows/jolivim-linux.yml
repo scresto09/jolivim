@@ -1,0 +1,77 @@
+# Build the JoliVIM packages for Linux with packaging/build.sh.
+#
+# A package only works on the distribution version it was built on, so there is
+# one for each version.  They are uploaded as workflow artifacts and, for a tag,
+# attached to the GitHub release.  The snap is not published to the Snap Store.
+name: JoliVIM Linux packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jolivim-linux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: ubuntu-24.04, kind: deb, image: 'ubuntu:24.04' }
+          - { name: ubuntu-26.04, kind: deb, image: 'ubuntu:26.04' }
+          - { name: fedora-44, kind: rpm, image: 'fedora:44' }
+          - { name: fedora-45, kind: rpm, image: 'fedora:45' }
+          # Also for RHEL 10, Oracle Linux 10 and Rocky Linux 10.
+          - { name: el10, kind: rpm, image: 'almalinux:10' }
+          # A third-party image: fixed to what was checked.  Update the digest
+          # to follow Slackware -current.
+          - name: slackware-current
+            kind: txz
+            image: 'aclemons/slackware:current-full@sha256:162d4e25a6f61876b5c9e9ad72e1e2f0d9d4b16dfe031e6f95c4127b893d3972'
+          - { name: snap, kind: snap, image: 'ghcr.io/canonical/snapcraft:8_core24' }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build the package
+        run: packaging/build.sh ${{ matrix.kind }} '${{ matrix.image }}'
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v7
+        with:
+          name: jolivim-${{ matrix.name }}
+          path: packaging/out/*.${{ matrix.kind }}
+          if-no-files-found: error
+
+  # Separate from the builds, so that the images have no write access.
+  release:
+    name: Attach to the release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download the packages
+        uses: actions/download-artifact@v7
+        with:
+          path: packages
+          merge-multiple: true
+
+      - name: Attach the packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --verify-tag --generate-notes
+          gh release upload "$TAG" packages/* --clobber

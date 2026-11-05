@@ -1,0 +1,92 @@
+# The version comes from build-in-container.sh.
+name: jvim
+title: JoliVIM
+base: core24
+version: "@VERSION@"
+summary: Vim with a native GNOME interface (GTK 4 and libadwaita)
+description: |
+  JoliVIM is a playful fork of Vim that gives it a modern, native look while
+  staying 100% Vim underneath.
+
+  JoliVIM is an independent project and is not affiliated with the Vim project.
+license: Vim AND MIT
+website: https://github.com/scresto09/jolivim
+issues: https://github.com/scresto09/jolivim/issues
+icon: usr/share/icons/hicolor/256x256/apps/jvim.png
+grade: devel
+# An editor runs the compilers and tools of the system on any file.
+confinement: classic
+
+apps:
+  jvim:
+    command: usr/bin/jvim-launcher
+    desktop: usr/share/applications/jvim.desktop
+
+parts:
+  jvim:
+    plugin: nil
+    source: .
+    build-attributes:
+      - enable-patchelf
+    build-packages:
+      - gcc
+      - gettext
+      - libacl1-dev
+      - libadwaita-1-dev
+      - libgdk-pixbuf-2.0-dev
+      - libglib2.0-dev-bin
+      - libgpm-dev
+      - libgtk-4-dev
+      - libncurses-dev
+      - libselinux1-dev
+      - libwayland-bin
+      - libwayland-dev
+      - make
+      - pkgconf
+      - wayland-protocols
+    stage-packages:
+      - adwaita-icon-theme
+      - gsettings-desktop-schemas
+      - hicolor-icon-theme
+      - libacl1
+      - libadwaita-1-0
+      - libgpm2
+      - libgtk-4-1
+      - librsvg2-common
+      - libselinux1
+      - libtinfo6
+    # Mesa crashes after enable-patchelf: GTK uses software rendering instead.
+    stage:
+      - "*"
+      - -usr/lib/*/dri
+      - -usr/lib/*/libEGL_mesa*
+      - -usr/lib/*/libGLX_mesa*
+      - -usr/lib/*/libLLVM*
+      - -usr/lib/*/libgallium*
+    override-build: |
+      cd src
+      ./configure --prefix=/snap/jvim/current/usr --enable-gui=gtk4 \
+          --with-libadwaita --enable-fail-if-missing \
+          --with-compiledby="Sylvain Cresto"
+      make -j"$CRAFT_PARALLEL_BUILD_COUNT"
+      make -j1 install DESTDIR="$CRAFT_PART_INSTALL" STRIP=true
+      cd "$CRAFT_PART_INSTALL"
+      cp -a snap/jvim/current/usr/. usr/
+      rm -rf snap
+      sed -i -e '/^TryExec=/d' \
+          -e 's|^Icon=.*|Icon=${SNAP}/usr/share/icons/hicolor/256x256/apps/jvim.png|' \
+          -e '/^Exec=/a StartupWMClass=jvim' usr/share/applications/jvim.desktop
+      install -m 755 "$CRAFT_PROJECT_DIR/snap/local/jvim-launcher" usr/bin/
+  # Not in the part above: override-prime disables enable-patchelf.
+  caches:
+    plugin: nil
+    after:
+      - jvim
+    override-prime: |
+      craftctl default
+      glib-compile-schemas usr/share/glib-2.0/schemas
+      arch=$CRAFT_ARCH_TRIPLET_BUILD_FOR
+      loaders=usr/lib/$arch/gdk-pixbuf-2.0/2.10.0
+      "/usr/lib/$arch/gdk-pixbuf-2.0/gdk-pixbuf-query-loaders" \
+          "$PWD/$loaders"/loaders/*.so |
+          sed "s|$PWD/|/snap/jvim/current/|" > "$loaders/loaders.cache"

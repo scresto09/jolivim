@@ -4557,6 +4557,48 @@ wait4pid(pid_t child, waitstatus *status)
     return wait_pid;
 }
 
+#ifdef USE_LIBADWAITA
+/*
+ * Called in a child process.  A package may set environment variables that are
+ * only meant for the GTK of JoliVIM.  They are listed in $JVIM_CHILD_UNSET,
+ * with the value for the child in $JVIM_ORIG_{name} if it had one.
+ */
+    static void
+restore_child_env(void)
+{
+    char	*list = getenv("JVIM_CHILD_UNSET");
+    char	saved[80];
+    char	*p;
+
+    if (list == NULL)
+	return;
+    for (p = list; *p != NUL; )
+    {
+	char	*end = p;
+	char	*orig;
+	char_u	*name;
+	size_t	len;
+
+	while (*end != NUL && *end != ' ')
+	    ++end;
+	len = end - p;
+	if (len > 0 && len < sizeof(saved) - STRLEN_LITERAL("JVIM_ORIG_"))
+	{
+	    vim_snprintf(saved, sizeof(saved), "JVIM_ORIG_%.*s", (int)len, p);
+	    name = (char_u *)saved + STRLEN_LITERAL("JVIM_ORIG_");
+	    orig = getenv(saved);
+	    if (orig != NULL)
+		vim_setenv(name, (char_u *)orig);
+	    else
+		vim_unsetenv(name);
+	    vim_unsetenv((char_u *)saved);
+	}
+	p = *end == NUL ? end : end + 1;
+    }
+    vim_unsetenv((char_u *)"JVIM_CHILD_UNSET");
+}
+#endif
+
 #if !defined(USE_SYSTEM) || defined(FEAT_JOB_CHANNEL)
 /*
  * Set the environment for a child process.
@@ -4634,6 +4676,9 @@ set_child_environment(
 	    "VIM_SERVERNAME=%s", serverName == NULL ? "" : (char *)serverName);
     putenv(envbuf_Servername);
 #  endif
+# endif
+# ifdef USE_LIBADWAITA
+    restore_child_env();
 # endif
 }
 
@@ -5192,6 +5237,9 @@ mch_call_shell_fork(
 	     * Call _exit() instead of exit() to avoid closing the connection
 	     * to the X/Wayland server (esp. with GTK, which uses atexit()).
 	     */
+# ifdef USE_LIBADWAITA
+	    restore_child_env();
+# endif
 	    execvp(argv[0], argv);
 	    _exit(EXEC_FAILED);	    // exec failed, return failure code
 	}
@@ -5883,6 +5931,9 @@ mch_get_cmd_output_direct(
 	vim_ignored = dup(fd_out[1]);
 	close(fd_out[1]);
 
+# ifdef USE_LIBADWAITA
+	restore_child_env();
+# endif
 	execvp(argv[0], argv);
 	_exit(127);
 	// NOTREACHED

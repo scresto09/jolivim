@@ -1,0 +1,29 @@
+Source: jolivim
+Section: editors
+Priority: optional
+Maintainer: Sylvain Cresto <scresto@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               gettext,
+               libacl1-dev,
+               libadwaita-1-dev (>= 1.5),
+               libgpm-dev,
+               libgtk-4-dev (>= 4.10),
+               libncurses-dev,
+               libselinux1-dev,
+               libwayland-bin,
+               libwayland-dev,
+               pkgconf,
+               wayland-protocols
+Standards-Version: 4.7.0
+Homepage: https://github.com/scresto09/jolivim
+Rules-Requires-Root: no
+
+Package: jolivim
+Architecture: any
+Depends: hicolor-icon-theme, ${misc:Depends}, ${shlibs:Depends}
+Description: Vim with a native GNOME interface (GTK 4 and libadwaita)
+ JoliVIM is a playful fork of Vim that gives it a modern, native look while
+ staying 100% Vim underneath. It provides the "jvim" command, which starts the
+ GUI, and does not conflict with an installed Vim.
+ .
+ JoliVIM is an independent project and is not affiliated with the Vim project.

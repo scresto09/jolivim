@@ -11478,7 +11478,9 @@ printf "%s\n" "not usable." >&6; }
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: cannot obtain from pkg_config." >&5
 printf "%s\n" "cannot obtain from pkg_config." >&6; }
   fi
+fi
 
+if test "x$GUITYPE" = "xGTK" -o "x$GUITYPE" = "xGTK4"; then
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking --disable-icon-cache-update argument" >&5
 printf %s "checking --disable-icon-cache-update argument... " >&6; }
   # Check whether --enable-icon_cache_update was given.
