@@ -16,6 +16,7 @@ SRC_ALL =	\
 		.github/workflows/ci-windows.yml \
 		.github/workflows/ci.yml \
 		.github/workflows/jolivim-msix.yml \
+		.github/workflows/jolivim-linux.yml \
 		.github/workflows/codeql-analysis.yml \
 		.github/workflows/coverity.yml \
 		.github/workflows/link-check.yml \
@@ -498,6 +499,17 @@ SRC_ALL =	\
 
 # Source files for Unix-like only.
 SRC_UNIX =	\
+		packaging/build-in-container.sh \
+		packaging/build.sh \
+		packaging/debian/control \
+		packaging/debian/copyright \
+		packaging/debian/rules \
+		packaging/debian/source/format \
+		packaging/jolivim.spec \
+		packaging/slackware/doinst.sh \
+		packaging/slackware/slack-desc \
+		packaging/snap/jvim-launcher \
+		packaging/snap/snapcraft.yaml \
 		Makefile \
 		Filelist \
 		README_src.txt \

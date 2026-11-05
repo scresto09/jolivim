@@ -230,6 +230,8 @@ jobs:
               GUI=%GUI% IME=yes ICONV=yes VIMDLL=${{ matrix.VIMDLL }} ^
               CI_FLAGS=/we4267
           )
+          @rem The next steps use "vim", it is "jvim-term" with VIMDLL=yes.
+          if "${{ matrix.VIMDLL }}"=="yes" copy /Y jvim-term.exe vim.exe
 
       - name: Build (MinGW)
         if: matrix.toolchain == 'mingw'

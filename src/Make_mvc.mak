@@ -684,7 +684,7 @@ CFLAGS = $(CFLAGS) /fsanitize=address
 
 !IFDEF NODEBUG
 
-VIM = vim
+VIMBASE = vim
 ! IF "$(OPTIMIZE)" == "SPACE"
 OPTFLAG = /O1
 ! ELSEIF "$(OPTIMIZE)" == "SPEED"
@@ -710,7 +710,7 @@ LIBC = libcmt.lib
 
 !ELSE  # DEBUG
 
-VIM = vimd
+VIMBASE = vimd
 ! IF ("$(CPU)" == "i386") || ("$(CPU)" == "ix86")
 DEBUGINFO = /ZI
 ! ENDIF
@@ -906,20 +906,23 @@ IME_LIB = imm32.lib
 ! ENDIF
 !ENDIF
 
+# The name without the GUI.  Not with a cycle: macros are expanded when used.
+VIM = $(VIMBASE)
+
 !IF "$(GUI)" == "yes"
 SUBSYSTEM = windows
 CFLAGS = $(CFLAGS) -DFEAT_GUI_MSWIN
 RCFLAGS = $(RCFLAGS) -DFEAT_GUI_MSWIN
 ! IF "$(VIMDLL)" == "yes"
 SUBSYSTEM_CON = console
-GVIM = j$(VIM)
-VIM = $(GVIM)-term
+GVIM = j$(VIMBASE)
+VIM = j$(VIMBASE)-term
 CUI_INCL = iscygpty.h
 CUI_OBJ = $(OUTDIR)\iscygpty.obj
 RCFLAGS = $(RCFLAGS) -DVIMDLL
 ! ELSE
-VIM = j$(VIM)
-GVIM = $(VIM)
+VIM = j$(VIMBASE)
+GVIM = j$(VIMBASE)
 ! ENDIF
 GUI_INCL = \
 	gui.h
