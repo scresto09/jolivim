@@ -27,8 +27,10 @@ jobs:
     uses: ./.github/workflows/ci-linux_asan.yml
     secrets: inherit
 
+  # JoliVIM only targets Windows and GNOME.
   macos:
     name: macOS
+    if: false
     uses: ./.github/workflows/ci-macos.yml
     secrets: inherit
 

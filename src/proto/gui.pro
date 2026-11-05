@@ -57,6 +57,7 @@ void gui_mouse_correct(void);
 void ex_gui(exarg_T *eap);
 int gui_find_bitmap(char_u *name, char_u *buffer, char *ext);
 void gui_find_iconfile(char_u *name, char_u *buffer, char *ext);
+void gui_show_startup_errors(void);
 void display_errors(void);
 int no_console_input(void);
 void gui_update_screen(void);
@@ -65,5 +66,4 @@ int gui_do_findrepl(int flags, char_u *find_text, char_u *repl_text, int down);
 void gui_handle_drop(int x, int y, int_u modifiers, char_u **fnames, int count);
 int check_for_interrupt(int key, int modifiers_arg);
 int gui_dialog_log(char_u *title, char_u *message);
-void gui_show_startup_errors(void);
 // vim: ft=c
