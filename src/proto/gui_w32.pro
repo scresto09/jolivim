@@ -44,6 +44,7 @@ void gui_mch_show_tabline(int showit);
 int gui_mch_showing_tabline(void);
 void gui_mch_update_tabline(void);
 void gui_mch_set_curtab(int nr);
+int gui_mch_is_dark(void);
 void gui_mch_set_dark_theme(int dark);
 void gui_mch_set_fullscreen(int flag);
 void ex_simalt(exarg_T *eap);

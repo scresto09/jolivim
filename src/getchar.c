@@ -2690,6 +2690,14 @@ parse_queued_messages(void)
 	    got_sigusr1 = FALSE;
 	}
 # endif
+# if defined(FEAT_GUI) && (defined(FEAT_WINUI) || defined(USE_LIBADWAITA))
+	if (gui_dark_changed)
+	{
+	    gui_dark_changed = FALSE;
+	    apply_autocmds(EVENT_USER, (char_u *)"JoliVIMDarkMode", NULL,
+								FALSE, curbuf);
+	}
+# endif
 	break;
     }
 

@@ -3514,6 +3514,8 @@ apply_dark_theme(int dark)
     static void
 winui_update_theme(void)
 {
+    gui_dark_changed = TRUE;
+
     // Window frame and menus first, then re-apply our caption-button/
     // tab colours so they win over the frame re-theming.
     apply_dark_theme(winui_is_dark_mode());
@@ -3530,6 +3532,17 @@ winui_update_theme(void)
 	InvalidateRect(s_toolbarhwnd, NULL, TRUE);
     }
 #  endif
+}
+# endif
+
+# if defined(FEAT_WINUI)
+/*
+ * Return TRUE when the GUI uses the dark theme, for has("gui_dark").
+ */
+    int
+gui_mch_is_dark(void)
+{
+    return winui_is_dark_mode();
 }
 # endif
 

@@ -401,6 +401,16 @@ default 'guioptions' does not include "m" and "T" and in the GUI 'mousemodel'
 is "popup".  <F10> shows the whole menu of Vim, unless <F10> is mapped.  Use
 has("gui_adwaita") to check for this.
 
+							*jolivim-colorscheme*
+When JoliVIM is in dark mode, on Windows or with GNOME, the "onedark" color
+scheme is used.  It follows the desktop while Vim is running: in light mode
+the "default" color scheme is used.  has("gui_dark") tells which mode is used
+and the |User| autocommand event "JoliVIMDarkMode" is triggered when it changes.
+This does not happen when you selected another color scheme, with the --clean
+argument or after: >
+	let g:loaded_jolivimtheme = 1
+<
+
 "make install" installs JoliVIM next to an installed Vim: the only command is
 "jvim", which starts the GUI, and the runtime files are in "share/jolivim".
 Use "jvim -v" to stay in the terminal.  "make install-jvim-term" adds the

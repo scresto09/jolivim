@@ -1,4 +1,4 @@
-*gui_w32.txt*	For Vim version 9.2.  Last change: 2026 May 25
+*gui_w32.txt*	For Vim version 9.2.  Last change: 2026 Nov 04
 
 
 		  VIM REFERENCE MANUAL	  by Bram Moolenaar
@@ -488,6 +488,11 @@ VIM_KEYCODE_TRANS_STRATEGY can be set to the desired value ("experimental" or
         set VIM_KEYCODE_TRANS_STRATEGY=experimental
         gvim.exe
 <
+
+Dark mode ~
+
+In the WinUI GUI of JoliVIM the "onedark" color scheme is used in dark mode, see
+|jolivim-colorscheme|.
 
 Title Bar						*gui-w32-title-bar*
 

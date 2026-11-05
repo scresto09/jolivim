@@ -72,6 +72,12 @@ Enabled with the `--with-libadwaita` configure option:
 - **Its own installation**: the `jvim` command, the runtime files in
   `share/jolivim` and its own desktop entry and icon.
 
+### Both
+
+- **Dark mode uses the "onedark" color scheme**, unless you selected another
+  one. It follows the desktop while JoliVIM is running. See
+  `:help jolivim-colorscheme`.
+
 ### Translations
 
 French translation included.
@@ -201,5 +207,8 @@ It tracks upstream Vim over time, so no local patch numbers are added to
 JoliVIM is built on the wonderful **Vim** by Bram Moolenaar et al. The Vim license
 applies to the original Vim code (`:help license`); the JoliVIM-specific additions
 are distributed under the same terms.
+The [onedark.vim](https://github.com/joshdick/onedark.vim) color scheme is
+Copyright (c) 2015 Joshua Dick and distributed under the MIT license, see
+`runtime/colors/onedark.vim`.
 Please support the original Vim project and consider helping children in Uganda.
 See `:help uganda`.

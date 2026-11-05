@@ -1623,6 +1623,11 @@ EXTERN volatile sig_atomic_t got_int INIT(= FALSE);
 // Volatile because it is used in signal handler catch_sigint().
 EXTERN volatile sig_atomic_t got_sigusr1 INIT(= FALSE);
 
+#if defined(FEAT_GUI) && (defined(FEAT_WINUI) || defined(USE_LIBADWAITA))
+// The GUI switched between light and dark, see parse_queued_messages().
+EXTERN int gui_dark_changed INIT(= FALSE);
+#endif
+
 #ifdef USE_TERM_CONSOLE
 EXTERN int	term_console INIT(= FALSE); // set to TRUE when console used
 #endif

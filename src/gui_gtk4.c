@@ -509,6 +509,17 @@ gui_mch_early_init_check(int give_message UNUSED)
     return OK;
 }
 
+#ifdef USE_LIBADWAITA
+    static void
+style_manager_dark_cb(
+	GObject *obj UNUSED,
+	GParamSpec *pspec UNUSED,
+	gpointer user_data UNUSED)
+{
+    gui_dark_changed = TRUE;
+}
+#endif
+
     int
 gui_mch_init_check(void)
 {
@@ -533,6 +544,8 @@ gui_mch_init_check(void)
     gtk_init();
 #ifdef USE_LIBADWAITA
     adw_init();
+    g_signal_connect(adw_style_manager_get_default(), "notify::dark",
+				    G_CALLBACK(style_manager_dark_cb), NULL);
 #endif
     return OK;
 }
@@ -1254,6 +1267,17 @@ gui_mch_show_toolbar(int showit)
 	if (gui.drawarea != NULL)
 	    gtk_widget_queue_draw(gui.drawarea);
     }
+}
+#endif
+
+#ifdef USE_LIBADWAITA
+/*
+ * Return TRUE when the GUI uses the dark theme, for has("gui_dark").
+ */
+    int
+gui_mch_is_dark(void)
+{
+    return adw_style_manager_get_dark(adw_style_manager_get_default());
 }
 #endif
 

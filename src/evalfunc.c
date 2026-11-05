@@ -8954,6 +8954,13 @@ f_has(typval_T *argvars, typval_T *rettv)
 	x = TRUE;
 	n = has_mbyte;
     }
+#if defined(FEAT_GUI) && (defined(FEAT_WINUI) || defined(USE_LIBADWAITA))
+    else if (STRICMP(name, "gui_dark") == 0)
+    {
+	x = TRUE;
+	n = gui.in_use && gui_mch_is_dark();
+    }
+#endif
     else if (STRICMP(name, "gui_running") == 0)
     {
 	x = TRUE;
@@ -9143,6 +9150,9 @@ dynamic_feature(char_u *feature)
 	    // this can only change on Unix where the ":gui" command could be
 	    // used.
 	    || (STRICMP(feature, "gui_running") == 0 && !gui.in_use)
+#endif
+#if defined(FEAT_GUI) && (defined(FEAT_WINUI) || defined(USE_LIBADWAITA))
+	    || STRICMP(feature, "gui_dark") == 0
 #endif
 #if defined(USE_ICONV) && defined(DYNAMIC_ICONV)
 	    || STRICMP(feature, "iconv") == 0
