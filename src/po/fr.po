@@ -4030,7 +4030,7 @@ msgid "type  :help sponsor<Enter>    for information "
 msgstr "saisissez  :help sponsor<Entrée>    pour plus d'informations          "
 
 msgid "menu  Help->Sponsor           for information    "
-msgstr "menu  Aide->Soutenir            pour plus d'info"
+msgstr "menu  Aide->Soutenir Vim        pour plus d'info"
 
 msgid "global"
 msgstr "global"
@@ -11934,7 +11934,7 @@ msgid "It's open source and freely distributable, making Vim look as"
 msgstr "C'est un logiciel libre, qui rend Vim aussi beau"
 
 msgid "good as it edits. But no offense, it's just for fun ;-)"
-msgstr "qu'il est efficace. Sans offense, c'est juste pour le plaisir ;-)"
+msgstr "qu'il est efficace. Pas d'offense, c'est juste pour rigoler ;-)"
 
 msgid "It's an independent project not affiliated with the Vim project"
 msgstr "C'est un projet indépendant, non affilié au projet Vim"
@@ -12015,10 +12015,10 @@ msgid "Character encoding used when writing the file. The text is not read again
 msgstr "Encodage des caractères utilisé pour écrire le fichier. Le texte n'est pas relu."
 
 msgid "Line Endings"
-msgstr "Fins de ligne"
+msgstr "Fin de ligne"
 
 msgid "Line endings used when writing the file. The text is not read again."
-msgstr "Fins de ligne utilisées pour écrire le fichier. Le texte n'est pas relu."
+msgstr "Fin de ligne utilisée pour écrire le fichier. Le texte n'est pas relu."
 
 msgid "Insert Spaces"
 msgstr "Insérer des espaces"
@@ -12086,3 +12086,21 @@ msgstr[1] "%d erreurs au démarrage : %s"
 
 msgid "View"
 msgstr "Voir"
+
+# JoliVIM: about dialog on GNOME (gui_gtk4_adw.c)
+
+msgid ""
+"Distributed under the <a href=\"https://github.com/scresto09/jolivim/blob/"
+"main/LICENSE\">Vim license</a>, see also \":help license\"."
+msgstr ""
+"Distribué sous la <a href=\"https://github.com/scresto09/jolivim/blob/main/"
+"LICENSE\">licence de Vim</a>, voir aussi \":help license\"."
+
+msgid "Maintainer"
+msgstr "Mainteneur"
+
+msgid "Based on Vim"
+msgstr "Basé sur Vim"
+
+msgid "The Vim contributors"
+msgstr "Les contributeurs de Vim"

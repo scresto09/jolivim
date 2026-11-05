@@ -153,4 +153,22 @@ func Test_startup_error_not_in_terminal()
   exe buf .. 'bwipe!'
 endfunc
 
+" In the GNOME GUI :about opens the dialog, without the intro screen.
+func Test_about_dialog()
+  CheckFeature gui_adwaita
+  CheckCanRunGui
+
+  let lines =<< trim END
+    about
+    call writefile([mode(1)], 'Xcolors')
+    qa!
+  END
+  call writefile(lines, 'Xcolors.vim', 'D')
+  call delete('Xcolors')
+  call system(GetVimCommand() .. ' -g -f -u NORC -N -U NONE -S Xcolors.vim')
+  call WaitForAssert({-> assert_true(filereadable('Xcolors'))})
+  call assert_equal(['n'], readfile('Xcolors'))
+  call delete('Xcolors')
+endfunc
+
 " vim: shiftwidth=2 sts=2 expandtab

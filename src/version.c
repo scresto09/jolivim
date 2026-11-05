@@ -4016,7 +4016,7 @@ ex_intro(exarg_T *eap UNUSED)
     void
 ex_about(exarg_T *eap)
 {
-#if defined(FEAT_GUI_MSWIN) && defined(FEAT_WINUI)
+#if (defined(FEAT_GUI_MSWIN) && defined(FEAT_WINUI)) || defined(USE_LIBADWAITA)
     if (gui.in_use && gui_mch_show_about())
 	return;
 #endif

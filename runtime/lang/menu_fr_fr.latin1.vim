@@ -29,7 +29,7 @@ menutrans &Find\.\.\.				Rec&hercher\.\.\.
 " -sep1-
 menutrans &Credits				&Remerciements
 menutrans Co&pying				&License
-menutrans &Sponsor				So&utenir
+menutrans &Sponsor				So&utenir\ Vim
 menutrans O&rphans				&Orphelins
 " -sep2-
 menutrans &Version				&Version

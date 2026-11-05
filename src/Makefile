@@ -2389,6 +2389,7 @@ JVIM_ICONS = 16 32 48 256
 
 install_jolivim: installjvimbin installjvimdesktop
 	$(MAKE) -f Makefile installruntime $(INSTALL_LANGS) $(JVIM_NAMES)
+	$(INSTALL_DATA) $(SCRIPTSOURCE)/joli.png $(DEST_RT)/joli.png
 	-find $(DEST_MAN_TOP) \( -name ejvim.1 -o -name jvimdiff.1 \
 		-o -name jvimtutor.1 -o -name jex.1 -o -name jview.1 \
 		-o -name rjvim.1 -o -name rjview.1 \) -exec rm -f {} +

@@ -925,6 +925,7 @@ gui_mch_show_about(void)
     WCHAR	*winfo;
     WCHAR	*whints;
     WCHAR	*wclose;
+    WCHAR	*wuganda;
     int		ret;
 
     // Look for joli.png in 'runtimepath' (e.g. in $VIMRUNTIME).
@@ -944,11 +945,10 @@ gui_mch_show_about(void)
 	    _("good as it edits. But no offense, it's just for fun ;-)"),
 	    _("It's an independent project not affiliated with the Vim project"));
 
-    vim_snprintf((char *)hints, sizeof(hints), "%s\n%s\n%s\n\n%s",
+    vim_snprintf((char *)hints, sizeof(hints), "%s\n%s\n%s",
 	    _("type  :help<Enter>  or  <F1>  for on-line help"),
 	    _("type  :q<Enter>               to exit         "),
-	    _("type  :help version9<Enter>   for version info"),
-	    _("Help poor children in Uganda!"));
+	    _("type  :help version9<Enter>   for version info"));
 
     if (imgbuf[0] != NUL)
 	wimg = (WCHAR *)enc_to_utf16(imgbuf, NULL);
@@ -956,17 +956,21 @@ gui_mch_show_about(void)
     winfo = (WCHAR *)enc_to_utf16(info, NULL);
     whints = (WCHAR *)enc_to_utf16(hints, NULL);
     wclose = (WCHAR *)enc_to_utf16((char_u *)_("Close"), NULL);
+    wuganda = (WCHAR *)enc_to_utf16((char_u *)_("Help poor children in Uganda!"),
+									NULL);
 
     // Dedicated link to the JoliVIM repository under the description.
     ret = WinUI_ShowAbout(s_hwnd, wimg, wtitle, winfo, whints, wclose,
 			    L"https://github.com/scresto09/jolivim",
-			    L"https://github.com/scresto09/jolivim");
+			    L"https://github.com/scresto09/jolivim",
+			    wuganda, L"https://www.vim.org/iccf/");
 
     vim_free(wimg);
     vim_free(wtitle);
     vim_free(winfo);
     vim_free(whints);
     vim_free(wclose);
+    vim_free(wuganda);
     return ret;
 }
 

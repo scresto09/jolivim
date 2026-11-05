@@ -103,7 +103,8 @@ int WinUI_BannerVisible(void);
 void gui_winui_banner_view(void);
 int WinUI_ShowAbout(HWND hwnd, const WCHAR *image_path, const WCHAR *title,
         const WCHAR *info, const WCHAR *hints, const WCHAR *close_label,
-        const WCHAR *link_text, const WCHAR *link_url);
+        const WCHAR *link_text, const WCHAR *link_url,
+        const WCHAR *hints_link_text, const WCHAR *hints_link_url);
 
 // Modern font picker.  In/out fields carry the current and the chosen font;
 // the "families" list and the labels are inputs filled on the C side.

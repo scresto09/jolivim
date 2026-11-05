@@ -74,6 +74,7 @@ Enabled with the `--with-libadwaita` configure option:
 
 ### Both
 
+- **"About" dialog**, from the Help menu or with `:about`.
 - **Startup errors in a banner**: errors in a vimrc or gvimrc appear in a banner
   at the top of the window, which can be closed, instead of a dialog.
 - **Dark mode uses the "onedark" color scheme**, unless you selected another

@@ -2315,7 +2315,8 @@ WinUI_ShowChecklistDialog(HWND hwnd, const WCHAR *title, const WCHAR *message,
     int
 WinUI_ShowAbout(HWND hwnd, const WCHAR *image_path, const WCHAR *title,
         const WCHAR *info, const WCHAR *hints, const WCHAR *close_label,
-        const WCHAR *link_text, const WCHAR *link_url)
+        const WCHAR *link_text, const WCHAR *link_url,
+        const WCHAR *hints_link_text, const WCHAR *hints_link_url)
 {
     if (s_in_popup || !ensure_init(hwnd))
         return FALSE;
@@ -2441,6 +2442,20 @@ WinUI_ShowAbout(HWND hwnd, const WCHAR *image_path, const WCHAR *title,
                             L"Cascadia Mono, Consolas, Courier New, monospace"));
             h.Foreground(grey);
             content.Children().Append(h);
+        }
+        if (hints_link_url != NULL && *hints_link_url != L'\0')
+        {
+            muxc::HyperlinkButton hl;
+            hl.Content(winrt::box_value(winrt::hstring(
+                    hints_link_text != NULL ? hints_link_text : hints_link_url)));
+            hl.Padding(mux::Thickness{0, 2, 0, 0});
+            hl.HorizontalAlignment(mux::HorizontalAlignment::Left);
+            try
+            {
+                hl.NavigateUri(winrt::Windows::Foundation::Uri(hints_link_url));
+            }
+            catch (...) {}
+            content.Children().Append(hl);
         }
 
         // Footer with a Close button.

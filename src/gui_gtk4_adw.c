@@ -14,6 +14,7 @@
  */
 
 #include "vim.h"
+#include "version.h"
 
 #if defined(FEAT_GUI_GTK) && defined(USE_LIBADWAITA)
 
@@ -928,9 +929,13 @@ header_bar_add_menu_button(GtkWidget *header_bar)
 header_bar_add_info_button(GtkWidget *header_bar)
 {
     GtkWidget *button = gtk_menu_button_new();
+    GtkIconTheme *theme = gtk_icon_theme_get_for_display(
+                                            gtk_widget_get_display(button));
 
+    // Ubuntu 24.04 does not have "info-outline-symbolic".
     gtk_menu_button_set_icon_name(GTK_MENU_BUTTON(button),
-            "info-outline-symbolic");
+            gtk_icon_theme_has_icon(theme, "info-outline-symbolic")
+                    ? "info-outline-symbolic" : "help-about-symbolic");
     gtk_widget_set_tooltip_text(button, _("Document Properties"));
     gtk_widget_set_focus_on_click(button, FALSE);
     gtk_menu_button_set_create_popup_func(GTK_MENU_BUTTON(button),
@@ -1373,6 +1378,110 @@ theend:
     vim_free(bufs);
     vim_free(bufrefs);
     vim_free(save);
+}
+
+/*
+ * do_in_runtimepath() callback: remember the directory of the first match.
+ */
+    static void
+about_find_icon_cb(char_u *fname, void *cookie)
+{
+    char_u **dir = cookie;
+
+    if (*dir == NULL && fname != NULL)
+    {
+	*dir = vim_strsave(fname);
+	if (*dir != NULL)
+	    *gettail_sep(*dir) = NUL;
+    }
+}
+
+    static void
+about_closed_cb(AdwDialog *dialog UNUSED, gpointer data UNUSED)
+{
+    gtk_widget_grab_focus(gui.drawarea);
+}
+
+/*
+ * ":about": show the "About" dialog, with the joli.png icon.
+ * Returns TRUE when it was shown.
+ */
+    int
+gui_mch_show_about(void)
+{
+    AdwDialog	*dialog = adw_about_dialog_new();
+    AdwAboutDialog *about = ADW_ABOUT_DIALOG(dialog);
+    const char	*maintainers[] = {"Sylvain Cresto", NULL};
+    const char	*vim_people[4];
+    char_u	*icon_dir = NULL;
+    char_u	version[64];
+    char_u	license[1024];
+    char_u	*text;
+    char_u	*title;
+    char_u	vim_credit[128];
+    char_u	*contributors;
+
+    (void)do_in_runtimepath((char_u *)"joli.png", 0, about_find_icon_cb,
+								    &icon_dir);
+    if (icon_dir != NULL)
+    {
+	gtk_icon_theme_add_search_path(
+		gtk_icon_theme_get_for_display(gtk_widget_get_display(gui.mainwin)),
+		(const char *)icon_dir);
+	adw_about_dialog_set_application_icon(about, "joli");
+	vim_free(icon_dir);
+    }
+    else
+	adw_about_dialog_set_application_icon(about, "jvim");
+
+    text = CONVERT_TO_UTF8((char_u *)_("JoliVIM"));
+    adw_about_dialog_set_application_name(about, (const char *)text);
+    CONVERT_TO_UTF8_FREE(text);
+
+    if (highest_patch())
+	vim_snprintf((char *)version, sizeof(version), "%s.%d",
+					VIM_VERSION_MEDIUM, highest_patch());
+    else
+	vim_snprintf((char *)version, sizeof(version), "%s",
+							VIM_VERSION_MEDIUM);
+    adw_about_dialog_set_version(about, (const char *)version);
+    adw_about_dialog_set_developer_name(about, "Sylvain Cresto");
+    adw_about_dialog_set_website(about, "https://github.com/scresto09/jolivim");
+    adw_about_dialog_set_issue_url(about,
+			    "https://github.com/scresto09/jolivim/issues");
+
+    // Not adw_about_dialog_set_developers(): its title is fixed to "Code by".
+    title = CONVERT_TO_UTF8((char_u *)_("Maintainer"));
+    adw_about_dialog_add_credit_section(about, (const char *)title, maintainers);
+    CONVERT_TO_UTF8_FREE(title);
+
+    title = CONVERT_TO_UTF8((char_u *)_("Based on Vim"));
+    vim_snprintf((char *)vim_credit, sizeof(vim_credit),
+			"%s https://www.vim.org", _("The Vim contributors"));
+    contributors = CONVERT_TO_UTF8(vim_credit);
+    vim_people[0] = "Bram Moolenaar";
+    vim_people[1] = "Christian Brabandt";
+    vim_people[2] = (const char *)contributors;
+    vim_people[3] = NULL;
+    adw_about_dialog_add_credit_section(about, (const char *)title, vim_people);
+    CONVERT_TO_UTF8_FREE(title);
+    CONVERT_TO_UTF8_FREE(contributors);
+
+    // No comments: they would move the website to a "Details" page.
+    vim_snprintf((char *)license, sizeof(license), "%s %s\n%s\n\n%s\n\n<a href=\"https://www.vim.org/iccf/\">%s</a>",
+	    _("It's open source and freely distributable, making Vim look as"),
+	    _("good as it edits. But no offense, it's just for fun ;-)"),
+	    _("It's an independent project not affiliated with the Vim project"),
+	    _("Distributed under the <a href=\"https://github.com/scresto09/jolivim/blob/main/LICENSE\">Vim license</a>, see also \":help license\"."),
+	    _("Help poor children in Uganda!"));
+    adw_about_dialog_set_license_type(about, GTK_LICENSE_CUSTOM);
+    text = CONVERT_TO_UTF8(license);
+    adw_about_dialog_set_license(about, (const char *)text);
+    CONVERT_TO_UTF8_FREE(text);
+
+    g_signal_connect(dialog, "closed", G_CALLBACK(about_closed_cb), NULL);
+    adw_dialog_present(dialog, gui.mainwin);
+    return TRUE;
 }
 
     int
