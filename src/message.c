@@ -1153,7 +1153,6 @@ messagesopt_changed(void)
 ex_messages(exarg_T *eap)
 {
     struct msg_hist *p;
-    char_u	    *s;
     int		    c = 0;
 
     if (STRCMP(eap->arg, "clear") == 0)
@@ -1185,23 +1184,6 @@ ex_messages(exarg_T *eap)
 	// Skip without number of messages specified
 	for (p = first_msg_hist; p != NULL && !got_int && c > 0;
 						    p = p->next, c--);
-    }
-
-    if (p == first_msg_hist)
-    {
-#ifdef FEAT_MULTI_LANG
-	s = get_mess_lang();
-#else
-	s = mch_getenv((char_u *)"LANG");
-#endif
-	if (s != NULL && *s != NUL)
-	    // The next comment is extracted by xgettext and put in po file for
-	    // translators to read.
-	    msg_attr(
-		    // Translator: Please replace the name and email address
-		    // with the appropriate text for your translation.
-		    _("Messages maintainer: The Vim Project"),
-		    HL_ATTR(HLF_T));
     }
 
     // Display what was not skipped.

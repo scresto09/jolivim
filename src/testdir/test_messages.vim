@@ -1000,4 +1000,31 @@ func Test_undo_messages()
   bwipe!
 endfunc
 
+" Resizing at the hit-enter prompt keeps the messages and moves the prompt.
+func Test_hit_enter_resize()
+  CheckRunVimInTerminal
+
+  let buf = RunVimInTerminal('', {'rows': 10, 'cols': 60})
+  call term_sendkeys(buf, ":echo \"first\\nsecond\\nthird\"\<CR>")
+  call WaitForAssert({-> assert_match('Press ENTER', term_getline(buf, 10))})
+  let rows = range(1, 9)->map({_, n -> trim(term_getline(buf, n))})
+  let firstrow = index(rows, 'first') + 1
+  call assert_true(firstrow > 0)
+
+  " Make the terminal taller.
+  call term_setsize(buf, 15, 60)
+  call WaitForAssert({-> assert_match('Press ENTER', term_getline(buf, 15))})
+  call assert_equal('first', trim(term_getline(buf, firstrow)))
+  call assert_equal('third', trim(term_getline(buf, firstrow + 2)))
+  call assert_notmatch('Press ENTER', term_getline(buf, 10))
+
+  " Make it smaller again, the prompt moves.
+  call term_setsize(buf, 12, 60)
+  call WaitForAssert({-> assert_match('Press ENTER', term_getline(buf, 12))})
+
+  call term_sendkeys(buf, "\<CR>")
+  call WaitForAssert({-> assert_notmatch('Press ENTER', term_getline(buf, 12))})
+  call StopVimInTerminal(buf)
+endfunc
+
 " vim: shiftwidth=2 sts=2 expandtab

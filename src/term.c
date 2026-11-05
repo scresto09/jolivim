@@ -3850,8 +3850,9 @@ set_shellsize_inner(int width, int height, int mustset)
     // screenalloc() (also invoked from screenclear()).  That is because the
     // "busy" check above may skip this, but not screenalloc().
 
+    // At the hit-enter prompt keep the messages, they can't be drawn again.
     if (State != MODE_ASKMORE && State != MODE_EXTERNCMD
-						      && State != MODE_CONFIRM)
+			    && State != MODE_CONFIRM && State != MODE_HITRETURN)
 	screenclear();
     else
 	screen_start();	    // don't know where cursor is now
@@ -3873,7 +3874,19 @@ set_shellsize_inner(int width, int height, int mustset)
 	 * Always need to call update_screen() or screenalloc(), to make
 	 * sure Rows/Columns and the size of ScreenLines[] is correct!
 	 */
-	if (State == MODE_ASKMORE || State == MODE_EXTERNCMD
+	if (State == MODE_HITRETURN)
+	{
+	    int old_rows = screen_Rows;
+
+	    screenalloc(FALSE);
+	    // Remove the prompt, it moves to the new last line.
+	    if (old_rows > 0 && old_rows <= Rows)
+		screen_fill(old_rows - 1, old_rows, 0, Columns, ' ', ' ', 0);
+	    msg_row = Rows - 1;
+	    repeat_message();
+	    redraw_all_later(UPD_NOT_VALID);
+	}
+	else if (State == MODE_ASKMORE || State == MODE_EXTERNCMD
 				     || State == MODE_CONFIRM || exmode_active)
 	{
 	    screenalloc(FALSE);
@@ -3914,13 +3927,6 @@ set_shellsize(int width, int height, int mustset)
 
     if (width < 0 || height < 0)    // just checking...
 	return;
-
-    if (State == MODE_HITRETURN || State == MODE_SETWSIZE)
-    {
-	// postpone the resizing
-	State = MODE_SETWSIZE;
-	return;
-    }
 
     // Avoid recursiveness.  This can happen when setting the window size
     // causes another window-changed signal or when two SIGWINCH signals come
