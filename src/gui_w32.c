@@ -7038,10 +7038,10 @@ gui_mch_init(void)
 #endif
 
 theend:
-# ifndef FEAT_WINUI
+#ifndef FEAT_WINUI
     // Display any pending error messages
     display_errors();
-# endif
+#endif
 
     return OK;
 }

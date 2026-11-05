@@ -370,7 +370,7 @@ properties_create_popup_cb(GtkMenuButton *button, gpointer data UNUSED)
     gtk_widget_set_tooltip_text(state->filetype,
             _("Selects the syntax highlighting and indentation settings "
                 "for this buffer."));
-# ifdef FEAT_EVAL
+#ifdef FEAT_EVAL
     {
         // eval_expr() changes the expression while evaluating it.
         char_u      *expr = vim_strsave(
@@ -392,7 +392,7 @@ properties_create_popup_cb(GtkMenuButton *button, gpointer data UNUSED)
         }
         free_tv(tv);
     }
-# endif
+#endif
     gtk_list_box_append(GTK_LIST_BOX(list_box), state->filetype);
 
     state->encoding = new_combo_row(_("Encoding"), encodings, FALSE);
@@ -1123,11 +1123,11 @@ alert_dialog_run(
     // <Esc> closes the dialog without choosing a button.
     adw_alert_dialog_set_close_response(alert, "close");
 
-# if ADW_CHECK_VERSION(1, 6, 0)
+#if ADW_CHECK_VERSION(1, 6, 0)
     // Keep the buttons side by side, unless 'guioptions' has the 'v' flag.
     adw_alert_dialog_set_prefer_wide_layout(alert,
                                     vim_strchr(p_go, GO_VERTICAL) == NULL);
-# endif
+#endif
 
     if (textfield != NULL)
     {
@@ -1270,9 +1270,9 @@ changed_dialog_run(buf_T **bufs, int *save, int count)
             ADW_RESPONSE_SUGGESTED);
     adw_alert_dialog_set_default_response(alert, "b2");
     adw_alert_dialog_set_close_response(alert, "b0");
-# if ADW_CHECK_VERSION(1, 6, 0)
+#if ADW_CHECK_VERSION(1, 6, 0)
     adw_alert_dialog_set_prefer_wide_layout(alert, TRUE);
-# endif
+#endif
 
     alert_dialog_wait(&state);
 
@@ -1297,9 +1297,9 @@ changed_buf_can_write(buf_T *buf)
 {
     return bufIsChanged(buf)
             && (buf->b_ffname != NULL
-# ifdef FEAT_BROWSE
+#ifdef FEAT_BROWSE
                 || (cmdmod.cmod_flags & CMOD_BROWSE)
-# endif
+#endif
                )
             && !bt_dontwrite(buf)
             && !buf->b_p_ro;
