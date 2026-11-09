@@ -7,6 +7,12 @@ name: JoliVIM Linux packages
 
 on:
   workflow_dispatch:
+    inputs:
+      package:
+        description: Package to build
+        type: choice
+        options: [all, ubuntu-24.04, ubuntu-26.04, fedora-44, fedora-45, el10, slackware-current, snap]
+        default: all
   push:
     tags: ['v*']
 
@@ -21,6 +27,9 @@ jobs:
   package:
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
+    # The matrix is not known in a job condition: skip the steps instead.
+    env:
+      SKIP: ${{ inputs.package && inputs.package != 'all' && inputs.package != matrix.name }}
     strategy:
       fail-fast: false
       matrix:
@@ -41,12 +50,13 @@ jobs:
 
     steps:
       - name: Checkout
+        if: env.SKIP != 'true'
         uses: actions/checkout@v7
 
       # The full Slackware image takes about 37 Gbyte, more than is free on the
       # runner.
       - name: Free disk space
-        if: matrix.kind == 'txz'
+        if: env.SKIP != 'true' && matrix.kind == 'txz'
         run: |
           sudo rm -rf /usr/local/lib/android /usr/local/share/boost /usr/lib/jvm \
               /usr/share/dotnet /usr/share/swift /opt/ghc /opt/hostedtoolcache
@@ -54,9 +64,11 @@ jobs:
           df -h /
 
       - name: Build the package
+        if: env.SKIP != 'true'
         run: packaging/build.sh ${{ matrix.kind }} '${{ matrix.image }}'
 
       - name: Upload the package
+        if: env.SKIP != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: jolivim-${{ matrix.name }}
