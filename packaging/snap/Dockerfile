@@ -9,12 +9,14 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl jq snapd squashfs-tools sudo \
  && rm -rf /var/lib/apt/lists/*
 
+# The Store limits requests from the shared addresses of CI runners (429).
 RUN set -e; arch=$(dpkg --print-architecture); \
     fetch() { \
-      url=$(curl -fsS -H 'Snap-Device-Series: 16' \
+      url=$(curl -fsS --retry 6 -H 'Snap-Device-Series: 16' \
           "https://api.snapcraft.io/v2/snaps/info/$1?architecture=$arch&fields=download" | \
           jq -r --arg ch "$2" '."channel-map"[] | select(.channel.track + "/" + .channel.name == $ch) | .download.url'); \
-      curl -fsSL -o /tmp/$1.snap "$url"; \
+      [ -n "$url" ] || { echo "$1 $2: not found in the Snap Store" >&2; exit 1; }; \
+      curl -fsSL --retry 6 -o /tmp/$1.snap "$url"; \
       mkdir -p /snap/$1; unsquashfs -q -n -d /snap/$1/current /tmp/$1.snap; \
       rm /tmp/$1.snap; \
     }; \
