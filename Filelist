@@ -508,6 +508,7 @@ SRC_UNIX =	\
 		packaging/jolivim.spec \
 		packaging/slackware/doinst.sh \
 		packaging/slackware/slack-desc \
+		packaging/snap/Dockerfile \
 		packaging/snap/jvim-launcher \
 		packaging/snap/snapcraft.yaml \
 		Makefile \

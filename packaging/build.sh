@@ -14,7 +14,8 @@ case $kind in
   rpm) image=${2:-fedora:latest} ;;
   # Slackware 15.0 is too old: GTK 4.4 and no libadwaita.
   txz) image=${2:-aclemons/slackware:current-full} ;;
-  snap) image=${2:-ghcr.io/canonical/snapcraft:8_core24} ;;
+  # Built from packaging/snap/Dockerfile.
+  snap) image=${2:-jolivim-snapcraft:core26} ;;
   *)
     echo "usage: $0 deb|rpm|txz|snap [image]" >&2
     exit 1
@@ -26,13 +27,17 @@ release=${RELEASE:-1}
 cd "$(dirname "$0")/.."
 part() { git show "$ref:src/version.h" | sed -n "s/^#define VIM_VERSION_$1[[:space:]]*\([0-9]*\)$/\1/p"; }
 patch=$(git show "$ref:src/version.c" |
-	sed -n '/included_patches\[\] =/,$s/^[[:space:]]*\([0-9][0-9]*\),.*/\1/p' | head -n 1)
+	sed -n '/included_patches\[\] =/,${/^[[:space:]]*[0-9][0-9]*,/{s/^[[:space:]]*\([0-9]*\),.*/\1/p;q;}}')
 version=$(part MAJOR).$(part MINOR).$patch
 
 out=$PWD/packaging/out
 mkdir -p "$out"
 git archive --format=tar.gz --prefix="jolivim-$version/" \
 	-o "$out/jolivim-$version.tar.gz" "$ref"
+
+if [ "$kind" = snap ] && [ -z "${2:-}" ]; then
+	docker build -t "$image" packaging/snap
+fi
 
 echo "Building $kind of JoliVIM $version from $(git rev-parse --short "$ref") in $image"
 # The container runs as root: give the files in packaging/out back to the user.

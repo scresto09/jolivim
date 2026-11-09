@@ -1,7 +1,7 @@
 # The version comes from build-in-container.sh.
 name: jvim
 title: JoliVIM
-base: core24
+base: core26
 version: "@VERSION@"
 summary: Vim with a native GNOME interface (GTK 4 and libadwaita)
 description: |

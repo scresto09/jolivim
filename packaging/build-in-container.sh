@@ -77,9 +77,9 @@ EOF
     sed "s/@VERSION@/$version/" "$packaging/snap/snapcraft.yaml" > snap/snapcraft.yaml
     cp "$packaging/snap/jvim-launcher" snap/local/
     apt-get update
-    # The image normally adds it when starting snapcraft.
-    PATH=$PATH:/usr/libexec/snapcraft
-    snapcraft pack --destructive-mode --output "$out/jvim_$version.snap"
+    # Snapcraft 9 only writes in the project directory.
+    snapcraft pack --destructive-mode --output "jvim_$version.snap"
+    mv "jvim_$version.snap" "$out/"
     ;;
   *)
     echo "unknown package type: $kind" >&2

@@ -36,11 +36,22 @@ jobs:
           - name: slackware-current
             kind: txz
             image: 'aclemons/slackware:current-full@sha256:162d4e25a6f61876b5c9e9ad72e1e2f0d9d4b16dfe031e6f95c4127b893d3972'
-          - { name: snap, kind: snap, image: 'ghcr.io/canonical/snapcraft:8_core24' }
+          # Built from packaging/snap/Dockerfile.
+          - { name: snap, kind: snap, image: '' }
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      # The full Slackware image takes about 37 Gbyte, more than is free on the
+      # runner.
+      - name: Free disk space
+        if: matrix.kind == 'txz'
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/local/share/boost /usr/lib/jvm \
+              /usr/share/dotnet /usr/share/swift /opt/ghc /opt/hostedtoolcache
+          docker image prune -af
+          df -h /
 
       - name: Build the package
         run: packaging/build.sh ${{ matrix.kind }} '${{ matrix.image }}'
@@ -55,7 +66,8 @@ jobs:
   # Separate from the builds, so that the images have no write access.
   release:
     name: Attach to the release
-    if: startsWith(github.ref, 'refs/tags/')
+    # Attach what was built, even if one package failed.
+    if: ${{ !cancelled() && startsWith(github.ref, 'refs/tags/') }}
     needs: package
     runs-on: ubuntu-latest
     permissions:
@@ -73,5 +85,6 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --verify-tag --generate-notes
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --verify-tag --generate-notes \
+              --notes "Windows: install JoliVIM from the [Microsoft Store](https://apps.microsoft.com/detail/9n2288l1n1fj)."
           gh release upload "$TAG" packages/* --clobber

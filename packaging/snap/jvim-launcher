@@ -6,7 +6,7 @@
 arch=$(ls "$SNAP/usr/lib" | grep -E -m 1 -- '-linux-gnu[a-z]*$')
 lib=$SNAP/usr/lib/$arch
 
-export JVIM_CHILD_UNSET="XDG_DATA_DIRS GSETTINGS_SCHEMA_DIR GDK_PIXBUF_MODULE_FILE GIO_MODULE_DIR GTK_EXE_PREFIX GDK_DEBUG GSK_RENDERER"
+export JVIM_CHILD_UNSET="XDG_DATA_DIRS GSETTINGS_SCHEMA_DIR GDK_PIXBUF_MODULE_FILE GIO_MODULE_DIR GTK_EXE_PREFIX GDK_DISABLE GSK_RENDERER"
 if [ -n "${XDG_DATA_DIRS:-}" ]; then
   export JVIM_ORIG_XDG_DATA_DIRS=$XDG_DATA_DIRS
 fi
@@ -16,7 +16,7 @@ export GDK_PIXBUF_MODULE_FILE=$lib/gdk-pixbuf-2.0/2.10.0/loaders.cache
 export GIO_MODULE_DIR=$lib/gio/modules
 export GTK_EXE_PREFIX=$SNAP/usr
 # The Mesa of the snap is not included, the GUI uses software rendering.
-export GDK_DEBUG=gl-disable
+export GDK_DISABLE=gl,vulkan
 export GSK_RENDERER=cairo
 
 exec "$SNAP/usr/bin/jvim" "$@"
