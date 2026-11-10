@@ -15,17 +15,17 @@ edits, just my personal opinion, of course :-)
 JoliVIM is an **independent project and is not affiliated with the Vim
 project**.
 
-Windows version: download it from the Microsoft Store:
-<https://apps.microsoft.com/detail/9n2288l1n1fj>
+**Windows version:** download it from the [Microsoft Store](https://apps.microsoft.com/detail/9n2288l1n1fj).
 
-Linux version: there is no package yet, build it from source (see below).
+**Linux version:** Prebuilt packages are available for several Linux distributions. Download the latest version from [GitHub Releases](https://github.com/scresto09/jolivim/releases).
 
 Repository: <https://github.com/scresto09/jolivim>
 
 For issues, please visit <https://github.com/scresto09/jolivim/issues>
 
-[![JoliVIM with the light theme](https://scresto.pages-perso.free.fr/images/jolivim-clair.png)](https://scresto.pages-perso.free.fr/images/jolivim-clair.png)
-[![JoliVIM with the dark theme](https://scresto.pages-perso.free.fr/images/jolivim-sombre.png)](https://scresto.pages-perso.free.fr/images/jolivim-sombre.png)
+[![JoliVIM on Linux](https://scresto.pages-perso.free.fr/images/jolivim-gnome.png)](https://scresto.pages-perso.free.fr/images/jolivim-gnome.png)
+[![JoliVIM on Windows with the light theme](https://scresto.pages-perso.free.fr/images/jolivim-clair.png)](https://scresto.pages-perso.free.fr/images/jolivim-clair.png)
+[![JoliVIM on Windows with the dark theme](https://scresto.pages-perso.free.fr/images/jolivim-sombre.png)](https://scresto.pages-perso.free.fr/images/jolivim-sombre.png)
 
 ---
 
