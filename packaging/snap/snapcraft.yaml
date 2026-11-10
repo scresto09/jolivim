@@ -13,7 +13,7 @@ license: Vim AND MIT
 website: https://github.com/scresto09/jolivim
 issues: https://github.com/scresto09/jolivim/issues
 icon: usr/share/icons/hicolor/256x256/apps/jvim.png
-grade: devel
+grade: stable
 # An editor runs the compilers and tools of the system on any file.
 confinement: classic
 
