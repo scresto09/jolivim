@@ -11,6 +11,8 @@ description: |
   JoliVIM is an independent project and is not affiliated with the Vim project.
 license: Vim AND MIT
 website: https://github.com/scresto09/jolivim
+source-code: https://github.com/scresto09/jolivim
+contact: mailto:scresto+jolivim@gmail.com
 issues: https://github.com/scresto09/jolivim/issues
 icon: usr/share/icons/hicolor/256x256/apps/jvim.png
 grade: stable
